@@ -81,3 +81,12 @@
 | 北向净买额 | `stock_hsgt_hist_em` | **止于 2024-08** | 已死 | — |
 | 高新低统计 | `stock_a_high_low_statistics` | 仅 2 年 | 不可回补 | 低 |
 | 宽度历史 | 湖内自算 | 与湖同深(2014 起) | 随个股回填 | 零 |
+
+
+### P6 · 风险模型+仓位层(2026-11-13 侦察定案,五路实测 star/维护状态)
+
+- **Barra 纯价量 5 因子现在就能算**:RSTR(动量,**必须滞后 21 日**防 A 股反转污染)/Beta/DASTD+CMRA+HSIGMA(残差波动)/Amihud 或 ln(21日成交额) 近似 Liquidity/长期反转;**Size 等(市值系)必须等股本快照——A 股第一解释力因子,优先补股本接口(一年一更的静态数据即可)**
+- 借 skill-risk-model 骨架(2026-11 活跃:WLS+EWMA+LedoitWolf 收缩,输入只需收益面板;GPL-3.0 只参考重写);Barra_CNE6(389★停更)/CNE5(184★停更)公式书用
+- 记分牌加两列:**因子 vs 特异 %var + 逐因子收益贡献**(堵“行业/风格暴露冒充 alpha”;alphalens 有 lag 泄露坑,不引)
+- 仓位层三选最小:**min(vol_target, 回撤 ladder, 0.5×Kelly)**;借 riskguard(68★,MIT,零依赖)熔断状态机(减仓单永远放行/高水位持久化);A 股特殊:CPPI 乘数 m≤3(跌停 gap risk,Cont 2007)、跌停日只降不升
+- 不借:pyfolio/alphalens 整库、Riskfolio-Lib(非当前瓶颈)、full Kelly(肥尾回撤不可忍)、各 Barra repo 的 Wind 数据管道(自有数据湖)

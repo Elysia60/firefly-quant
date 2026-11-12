@@ -179,6 +179,7 @@ footer{{margin-top:36px;font-size:12px;color:var(--muted)}}
 <h2>系统状态(doctor 七项)</h2>
 <div class="card"><b>overall = {doctor['overall']}</b>{doctor_html}</div>
 
+<div class=warnbox><b>[S2] 已证明(负面,2026-11-13)</b>:avoid→空仓策略日频全变体不优于买入持有——B 不门控净值 0.13(年化 −15.7%,744 次换手,mdd −87%);E 门控+5日去抖 0.56(换手 50,mdd −57%);F 纯 regime 熊市空仓 1.095 ≈ 基准 1.144。[S1] 的相对弱势信息(p=0.001)<b>不足以转化为日频择时收益</b>——鞭打成本+漂移支配(csqaq 教训#2 在 A 股复现)。信息降级为研究资产:组合内风格筛选/对冲参考,禁止日频开关。</div>
 <footer>萤火计划 · astock-monitor · 方法论正本 <code>METHODS.md</code> · 重新生成:<code>python scripts/build_dashboard.py</code><br>
 数据仅供研究学习,不构成投资建议,不公开荐股。</footer>
 </main></body></html>"""
