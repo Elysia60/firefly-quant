@@ -146,7 +146,8 @@ def summarize(conn: sqlite3.Connection, cost_rt: float = 0.0020,
 def replay(conn: sqlite3.Connection, index_rows: list[tuple[date, float]],
            trading_days: list[date], start: date, end: date,
            windows: tuple[int, ...] = WINDOWS,
-           breadth_map: dict[date, float] | None = None) -> dict:
+           breadth_map: dict[date, float] | None = None,
+           sentiment_map: dict[date, float] | None = None) -> dict:
     """历史回放:对 start~end 每个交易日生成信号并判卷(同一条流水线,无特殊通道)。"""
     from .signals import generate_signal
 
@@ -156,7 +157,8 @@ def replay(conn: sqlite3.Connection, index_rows: list[tuple[date, float]],
     skipped = 0
     for d in days_in_range:
         try:
-            sig = generate_signal(index_rows, d, breadth_map=breadth_map)
+            sig = generate_signal(index_rows, d, breadth_map=breadth_map,
+                                  sentiment_map=sentiment_map)
         except ValueError:
             skipped += 1  # 历史起点不足 21 日窗——预期形态,跳过不中断
             continue

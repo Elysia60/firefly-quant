@@ -170,12 +170,14 @@ def max_gap_days(dates: list[date]) -> int:
 # ---------------------------------------------------------------- 主入口
 
 def generate_signal(index_rows: list[tuple[date, float]], signal_date: date,
-                    breadth_map: dict[date, float] | None = None) -> Signal:
-    """生成 signal_date 的指数信号(信号 v2:趋势+动量双腿,情绪待接入)。
+                    breadth_map: dict[date, float] | None = None,
+                    sentiment_map: dict[date, float] | None = None) -> Signal:
+    """生成 signal_date 的指数信号(信号 v3:三分项全腿)。
 
-    防泄漏:**只用 trade_date < signal_date 的收盘与宽度**(决策只用截至昨日)。
-    index_rows = [(date, close)] 升序;breadth_map = {date: 上涨家数占比}(湖内回算),
-    取严格早于 signal_date 的最近一天;缺失则动量=None → 权重再归一(质量标注)。
+    防泄漏:**只用 trade_date < signal_date 的收盘/宽度/情绪**(决策只用截至昨日)。
+    breadth_map = {date: 上涨家数占比};sentiment_map = {date: 贪婪度 0-100}
+    (两融余额分位,贪婪=高分=危险,csqaq 反向锚点)。任一缺失 → 该分 None,
+    权重再归一并标注(质量标注给决策者,不静默造分)。
     """
     hist = [(d, c) for d, c in index_rows if d < signal_date]
     dates = [d for d, _ in hist]
@@ -185,11 +187,8 @@ def generate_signal(index_rows: list[tuple[date, float]], signal_date: date,
     sma20 = sma(closes, 20)
     rsi14 = rsi(closes, 14)
     ts = trend_score(closes[-1], sma20, rsi14)
-    breadth = None
-    if breadth_map:
-        prior = [d for d in breadth_map if d < signal_date]
-        if prior:
-            breadth = breadth_map[max(prior)]
+    breadth = _last_prior(breadth_map, signal_date)
+    greed = _last_prior(sentiment_map, signal_date)
     streak_up = 0
     for i in range(len(closes) - 1, 0, -1):
         if closes[i] > closes[i - 1]:
@@ -197,9 +196,11 @@ def generate_signal(index_rows: list[tuple[date, float]], signal_date: date,
         else:
             break
     ms = momentum_score(breadth, streak_up)
-    comp, meta = composite_score({"trend": ts, "momentum": ms})
+    ss = sentiment_score(greed)
+    comp, meta = composite_score({"trend": ts, "momentum": ms, "sentiment": ss})
     q = DataQuality(gap_days=max_gap_days(dates[-60:]))
     q.breadth = "ok" if breadth is not None else "missing"
+    q.sentiment = "ok" if ss is not None else "missing"
     if q.gap_days >= 5:
         q.banner = f"数据缺口 {q.gap_days} 天,趋势分可信度降级(csqaq 缺口纪律)"
     verdict = verdict_of(closes, comp)
@@ -207,9 +208,18 @@ def generate_signal(index_rows: list[tuple[date, float]], signal_date: date,
                   composite=comp,
                   verdict=verdict,
                   components={"trend": round(ts, 2), "momentum": round(ms, 2) if ms is not None else None,
-                              "breadth": breadth, "streak_up": streak_up,
+                              "sentiment": round(ss, 2) if ss is not None else None,
+                              "breadth": breadth, "greed": greed, "streak_up": streak_up,
                               "renormalized": meta["renormalized"], "missing": meta["missing"]},
                   data_quality=q)
+
+
+def _last_prior(m: dict[date, float] | None, signal_date: date) -> float | None:
+    """取严格早于 signal_date 的最近值(防泄漏取用口);空/无前值返回 None。"""
+    if not m:
+        return None
+    prior = [d for d in m if d < signal_date]
+    return m[max(prior)] if prior else None
 
 
 def load_index_closes(lake_dir: str | Path, symbol: str = "000300.SH") -> list[tuple[date, float]]:

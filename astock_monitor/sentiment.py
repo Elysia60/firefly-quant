@@ -93,6 +93,29 @@ def compute_breadth_history(bars_df, ma_windows: tuple[int, ...] = (20, 60)) -> 
     return daily
 
 
+def load_margin_greed(lake_raw: Path, rank_window: int = 500) -> dict:
+    """两融余额 → 贪婪度 0-100(滚动分位;杠杆升高=贪婪=危险,csqaq 反向锚点口径)。
+
+    输入:raw/akshare/margin/part.parquet(stock_margin_account_info 全量回补)。
+    惰性 pandas;分位池不含当日(防泄漏,同 regime.vol_pct 口径)。
+    """
+    import pandas as pd  # noqa: PLC0415
+
+    path = Path(lake_raw) / "akshare" / "margin" / "part.parquet"
+    if not path.exists():
+        return {}
+    df = pd.read_parquet(path)
+    date_col = next(c for c in df.columns if "日期" in c or c.lower() == "date")
+    bal_col = next(c for c in df.columns if "融资余额" in str(c))
+    df = df[[date_col, bal_col]].copy()
+    df.columns = ["date", "balance"]
+    df["date"] = pd.to_datetime(df["date"]).dt.date
+    df = df.drop_duplicates("date").sort_values("date").reset_index(drop=True)
+    df["greed"] = (df["balance"].rolling(rank_window).rank(pct=True) * 100).shift(1)
+    # shift(1):分位池不含当日——T 日贪婪度只反映 ≤T-1(与 regime.vol_pct 同纪律)
+    return {d: float(v) for d, v in zip(df["date"], df["greed"]) if pd.notna(v)}
+
+
 def _limiter(cfg: dict):
     from .collect import RateLimiter
     c = cfg["collect"]

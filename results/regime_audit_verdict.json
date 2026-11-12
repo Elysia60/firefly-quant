@@ -8,31 +8,31 @@
   },
   "courts": {
     "bull": {
-      "signal_n": 137,
-      "control_n": 35,
-      "mean_signal": 0.00408,
-      "mean_control": 0.00218,
-      "d_obs": 0.00189,
-      "p_low": 0.6853146853146853,
-      "p_high": 0.3156843156843157
+      "signal_n": null,
+      "control_n": 1,
+      "mean_signal": null,
+      "mean_control": null,
+      "d_obs": null,
+      "p_low": null,
+      "p_high": null
     },
     "neutral": {
-      "signal_n": 533,
-      "control_n": 278,
-      "mean_signal": 0.00118,
-      "mean_control": 0.01739,
-      "d_obs": -0.01621,
+      "signal_n": 998,
+      "control_n": 137,
+      "mean_signal": 0.00318,
+      "mean_control": 0.01651,
+      "d_obs": -0.01333,
       "p_low": 0.000999000999000999,
       "p_high": 1.0
     },
     "bear": {
-      "signal_n": 189,
-      "control_n": 32,
-      "mean_signal": -5e-05,
-      "mean_control": 0.01331,
-      "d_obs": -0.01336,
-      "p_low": 0.012987012987012988,
-      "p_high": 0.988011988011988
+      "signal_n": 164,
+      "control_n": 62,
+      "mean_signal": 0.00092,
+      "mean_control": 0.011,
+      "d_obs": -0.01008,
+      "p_low": 0.013986013986013986,
+      "p_high": 0.987012987012987
     }
   },
   "verdict_rule": "各庭 d_obs 收缩向 0 → 信号=regime 代理,撤销;庭内仍显著 → regime 之外有信息,保留并限定适用域"

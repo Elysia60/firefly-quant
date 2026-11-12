@@ -204,9 +204,11 @@ def main(argv: list[str] | None = None) -> int:
                     bdf = pd.read_parquet(bh)
                     breadth_map = {d: float(v) for d, v in
                                    zip(pd.to_datetime(bdf["date"]).dt.date, bdf["up_ratio"])}
+                from .sentiment import load_margin_greed
+                greed_map = load_margin_greed(resolve_path(cfg, "paths.lake_raw"))
                 r = F.replay(conn, rows, days,
                              date.fromisoformat(args.start), date.fromisoformat(args.end),
-                             breadth_map=breadth_map)
+                             breadth_map=breadth_map, sentiment_map=greed_map)
             else:  # forecast-summary
                 r = F.summarize(conn)
             import json as _json

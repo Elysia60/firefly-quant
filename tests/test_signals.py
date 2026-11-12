@@ -149,6 +149,27 @@ class MomentumLegTest(unittest.TestCase):
         self.assertTrue(sig.components["renormalized"])
         self.assertEqual(sig.components["missing"], ["momentum", "sentiment"])
 
+    def test_sentiment_leg(self):
+        # 贪婪度升高 → 情绪分下降(反向锚点) → 综合分下降;防泄漏:只用 < T
+        base = S.generate_signal(self.rows, self.t)
+        greedy = S.generate_signal(self.rows, self.t,
+                                   sentiment_map={self.t - timedelta(days=1): 95.0})
+        fearful = S.generate_signal(self.rows, self.t,
+                                    sentiment_map={self.t - timedelta(days=1): 5.0})
+        self.assertLess(greedy.composite, base.composite)
+        self.assertGreater(fearful.composite, base.composite)
+        self.assertEqual(greedy.components["missing"], ["momentum"])
+        same_day = S.generate_signal(self.rows, self.t, sentiment_map={self.t: 95.0})
+        self.assertIsNone(same_day.components["sentiment"])  # T 日情绪不可用
+
+    def test_three_legs_full(self):
+        sig = S.generate_signal(self.rows, self.t,
+                                breadth_map={self.t - timedelta(days=1): 0.6},
+                                sentiment_map={self.t - timedelta(days=1): 50.0})
+        self.assertEqual(sig.components["missing"], [])
+        self.assertFalse(sig.components["renormalized"])
+        self.assertIsNotNone(sig.components["sentiment"])
+
 
 if __name__ == "__main__":
     unittest.main()
