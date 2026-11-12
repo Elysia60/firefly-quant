@@ -285,40 +285,63 @@ def fetch_hist_sina(cfg: dict, conn, code: str, fetcher=None, limiter=None) -> d
     return {"status": "ok", "task_key": tkey, "rows": len(out), "norm_path": str(norm_path)}
 
 
+def symbol_cne(code: str) -> str:
+    """6 位代码 → CNEquity 湖内 instruments 的后缀格式(000001.SZ / 600519.SH / 920001.BJ)。"""
+    code = code.strip()
+    if code.startswith("6"):
+        return f"{code}.SH"
+    if code.startswith(("0", "3")):
+        return f"{code}.SZ"
+    return f"{code}.BJ"
+
+
 def backfill_cnequity(cfg: dict, universe_codes: list[str], start: str, end: str,
+                      config_path: str | Path | None = None,
                       try_run: bool = False) -> dict:
     """历史回填主源 = CNEquity TDX(关锁决策,METHODS §0)。
 
-    沙箱内 msvcrt.locking 会被拦(PoC-3),默认只生成 profile 配置 + 输出待执行命令;
-    try_run=True 才尝试子进程,失败如实报告。原始层可由 akshare 独立重建(退路)。
+    真实接口(2026-11-12 对 cne CLI 实测,--plan 干跑已验证):
+      cne config create --config <lake_cfg> --data-root <lake> --force
+      cne backfill daily_bars --config <lake_cfg> --start S --end E --symbols c1,c2,...
+      cne backfill daily_bars --config <lake_cfg> --profile delisted   # 退市股(幸存者偏差对策)
+    daily_bars 按 symbol 逐只抓取,与窗口年数无关——务必用 --symbols 限定作用域,
+    先小批试点(50 只/1 年)校验 PIT/退市/复权,再放全市场。
+
+    默认只生成命令与成分清单(不动网络);try_run=True 才执行——沙箱内
+    msvcrt.locking 会被拦(PoC-3),真实抓取须在宿主机命令行跑。
     """
-    state_dir = ensure_dir(resolve_path(cfg, "paths.state_dir"))
-    profile = state_dir / "cne_backfill_profile.toml"
-    lines = [
-        "# 由 astock_monitor.backfill_cnequity 生成;CNEquity TDX 回填 profile",
-        f"# universe={len(universe_codes)} stocks  range={start}~{end}",
-        "[universe]",
-        "codes = [" + ", ".join(f'"{c}"' for c in universe_codes) + "]",
-        f"start = \"{start}\"",
-        f"end = \"{end}\"",
-        "",
-        "[sources]",
-        "tdx_protocol = true",
+    repo_root = Path(__file__).resolve().parent.parent
+    lake_cfg = Path(config_path) if config_path else repo_root / "configs" / "cnequity.toml"
+    lake_root = repo_root / "data" / "cnequity-lake"
+    syms = ",".join(symbol_cne(c) for c in universe_codes)
+    commands = [
+        f'cne config create --config "{lake_cfg}" --data-root "{lake_root}" --force',
+        f'cne backfill daily_bars --config "{lake_cfg}" --plan --start {start} --end {end} --symbols {syms}',
+        f'cne backfill daily_bars --config "{lake_cfg}" --start {start} --end {end} --symbols {syms}',
+        f'cne backfill daily_bars --config "{lake_cfg}" --profile delisted',
     ]
-    profile.write_text("\n".join(lines), encoding="utf-8")
-    command = f'cne init --profile "{profile}"'
-    result = {"profile": str(profile), "command": command, "status": "prepared"}
+    result = {
+        "status": "prepared",
+        "universe_count": len(universe_codes),
+        "window": [start, end],
+        "lake_config": str(lake_cfg),
+        "commands": commands,
+        "note": "先跑 --plan 干跑核对作用域;真实抓取在宿主机命令行(沙箱拦 msvcrt.locking,PoC-3)",
+    }
     if try_run:
         import subprocess
+        cne_exe = "cne"
         try:
-            proc = subprocess.run(["cne", "init", "--profile", str(profile)],
-                                  capture_output=True, text=True, timeout=3600)
+            proc = subprocess.run(
+                [cne_exe, "backfill", "daily_bars", "--config", str(lake_cfg),
+                 "--start", start, "--end", end, "--symbols", syms],
+                capture_output=True, text=True, timeout=3600)
             result["status"] = "ok" if proc.returncode == 0 else "failed"
             result["stdout_tail"] = proc.stdout[-800:]
             result["stderr_tail"] = proc.stderr[-800:]
         except FileNotFoundError:
             result["status"] = "cne_not_found"
-            result["hint"] = "在宿主机命令行运行 command 字段给出的命令(沙箱外)"
+            result["hint"] = "宿主机无 cne 命令;用 WorkBuddy venv 的 Scripts/cne.exe 或把 venv/Scripts 加入 PATH"
         except subprocess.TimeoutExpired:
             result["status"] = "timeout"
     return result
