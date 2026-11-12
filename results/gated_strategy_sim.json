@@ -1,0 +1,67 @@
+{
+  "cost_side": 0.001,
+  "start": "2015-01-05",
+  "index": "000300.SH",
+  "results": [
+    {
+      "mode": "A",
+      "nav": 1.1444,
+      "ann_ret": 0.0114,
+      "sharpe": 0.16,
+      "max_dd": -0.467,
+      "switches": 0,
+      "flat_days": 0,
+      "days": 2881
+    },
+    {
+      "mode": "B",
+      "nav": 0.132,
+      "ann_ret": -0.157,
+      "sharpe": -0.262,
+      "max_dd": -0.872,
+      "switches": 744,
+      "flat_days": 1436,
+      "days": 2881
+    },
+    {
+      "mode": "C",
+      "nav": 0.1803,
+      "ann_ret": -0.1345,
+      "sharpe": -0.19,
+      "max_dd": -0.8409,
+      "switches": 622,
+      "flat_days": 1148,
+      "days": 2881
+    },
+    {
+      "mode": "D",
+      "nav": 0.8345,
+      "ann_ret": -0.0151,
+      "sharpe": 0.13,
+      "max_dd": -0.4996,
+      "switches": 124,
+      "flat_days": 288,
+      "days": 2881
+    },
+    {
+      "mode": "E",
+      "nav": 0.5641,
+      "ann_ret": -0.0471,
+      "sharpe": -0.138,
+      "max_dd": -0.5676,
+      "switches": 50,
+      "flat_days": 524,
+      "days": 2881
+    },
+    {
+      "mode": "F",
+      "nav": 1.0953,
+      "ann_ret": 0.0077,
+      "sharpe": 0.149,
+      "max_dd": -0.467,
+      "switches": 14,
+      "flat_days": 525,
+      "days": 2881
+    }
+  ]
+}
