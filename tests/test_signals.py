@@ -118,5 +118,37 @@ class SignalLeakProofTest(unittest.TestCase):
             S.generate_signal(rows, self.t)
 
 
+class MomentumLegTest(unittest.TestCase):
+    """信号 v2:动量分(宽度)激活;防泄漏——只用 < T 的宽度;缺失 → 再归一。"""
+
+    def setUp(self):
+        days = _seq_days(40)
+        self.rows = [(d, 100.0 + (i % 5) * 0.5) for i, d in enumerate(days)]
+        self.t = days[-1]
+
+    def test_breadth_changes_composite(self):
+        base = S.generate_signal(self.rows, self.t)
+        bullish = S.generate_signal(self.rows, self.t,
+                                    breadth_map={self.t - timedelta(days=1): 0.9})
+        bearish = S.generate_signal(self.rows, self.t,
+                                    breadth_map={self.t - timedelta(days=1): 0.1})
+        self.assertGreater(bullish.composite, base.composite)
+        self.assertLess(bearish.composite, base.composite)
+        self.assertEqual(bullish.components["missing"], ["sentiment"])  # 只缺情绪
+        self.assertTrue(bullish.components["renormalized"])  # 情绪恒缺 → 权重必然再归一
+        self.assertIn("momentum", bullish.components)         # 但动量腿已实装参与合成
+
+    def test_breadth_never_uses_same_day(self):
+        # 宽度只提供 T 当天值 → 不可用(防泄漏),动量=None 再归一
+        sig = S.generate_signal(self.rows, self.t, breadth_map={self.t: 0.9})
+        self.assertIsNone(sig.components["momentum"])
+        self.assertEqual(sig.data_quality.breadth, "missing")
+
+    def test_renormalized_without_breadth(self):
+        sig = S.generate_signal(self.rows, self.t)
+        self.assertTrue(sig.components["renormalized"])
+        self.assertEqual(sig.components["missing"], ["momentum", "sentiment"])
+
+
 if __name__ == "__main__":
     unittest.main()

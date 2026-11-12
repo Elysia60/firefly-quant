@@ -197,8 +197,16 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"本次判卷 {n} 条")
                 return 0
             if args.cmd == "forecast-replay":
+                breadth_map = None
+                bh = resolve_path(cfg, "paths.lake_norm") / "breadth_history" / "part.parquet"
+                if bh.exists():
+                    import pandas as pd  # noqa: PLC0415
+                    bdf = pd.read_parquet(bh)
+                    breadth_map = {d: float(v) for d, v in
+                                   zip(pd.to_datetime(bdf["date"]).dt.date, bdf["up_ratio"])}
                 r = F.replay(conn, rows, days,
-                             date.fromisoformat(args.start), date.fromisoformat(args.end))
+                             date.fromisoformat(args.start), date.fromisoformat(args.end),
+                             breadth_map=breadth_map)
             else:  # forecast-summary
                 r = F.summarize(conn)
             import json as _json

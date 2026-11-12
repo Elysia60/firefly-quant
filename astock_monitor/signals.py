@@ -169,11 +169,13 @@ def max_gap_days(dates: list[date]) -> int:
 
 # ---------------------------------------------------------------- 主入口
 
-def generate_signal(index_rows: list[tuple[date, float]], signal_date: date) -> Signal:
-    """生成 signal_date 的指数信号。
+def generate_signal(index_rows: list[tuple[date, float]], signal_date: date,
+                    breadth_map: dict[date, float] | None = None) -> Signal:
+    """生成 signal_date 的指数信号(信号 v2:趋势+动量双腿,情绪待接入)。
 
-    防泄漏:**只用 trade_date < signal_date 的收盘**(决策只用截至昨日)。
-    index_rows = [(date, close)] 升序,允许有缺口(缺口进质量标注,不填充)。
+    防泄漏:**只用 trade_date < signal_date 的收盘与宽度**(决策只用截至昨日)。
+    index_rows = [(date, close)] 升序;breadth_map = {date: 上涨家数占比}(湖内回算),
+    取严格早于 signal_date 的最近一天;缺失则动量=None → 权重再归一(质量标注)。
     """
     hist = [(d, c) for d, c in index_rows if d < signal_date]
     dates = [d for d, _ in hist]
@@ -183,15 +185,30 @@ def generate_signal(index_rows: list[tuple[date, float]], signal_date: date) -> 
     sma20 = sma(closes, 20)
     rsi14 = rsi(closes, 14)
     ts = trend_score(closes[-1], sma20, rsi14)
-    comp, meta = composite_score({"trend": ts})
+    breadth = None
+    if breadth_map:
+        prior = [d for d in breadth_map if d < signal_date]
+        if prior:
+            breadth = breadth_map[max(prior)]
+    streak_up = 0
+    for i in range(len(closes) - 1, 0, -1):
+        if closes[i] > closes[i - 1]:
+            streak_up += 1
+        else:
+            break
+    ms = momentum_score(breadth, streak_up)
+    comp, meta = composite_score({"trend": ts, "momentum": ms})
     q = DataQuality(gap_days=max_gap_days(dates[-60:]))
+    q.breadth = "ok" if breadth is not None else "missing"
     if q.gap_days >= 5:
         q.banner = f"数据缺口 {q.gap_days} 天,趋势分可信度降级(csqaq 缺口纪律)"
     verdict = verdict_of(closes, comp)
-    return Signal(signal_date=signal_date, trend_score=round(ts, 2), composite=comp,
+    return Signal(signal_date=signal_date, trend_score=round(ts, 2) if ts is not None else 0.0,
+                  composite=comp,
                   verdict=verdict,
-                  components={"trend": round(ts, 2), "renormalized": meta["renormalized"],
-                              "missing": meta["missing"]},
+                  components={"trend": round(ts, 2), "momentum": round(ms, 2) if ms is not None else None,
+                              "breadth": breadth, "streak_up": streak_up,
+                              "renormalized": meta["renormalized"], "missing": meta["missing"]},
                   data_quality=q)
 
 
