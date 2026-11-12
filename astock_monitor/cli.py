@@ -6,6 +6,7 @@ Windows GBK 教训(csqaq #3):强制 stdout UTF-8;bat 里同时设 PYTHONUTF8=1�
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from datetime import date
 
@@ -63,6 +64,15 @@ def main(argv: list[str] | None = None) -> int:
 
     p_v = sub.add_parser("verify-poc4", help="复跑 PoC-4 接口对齐(需 akquant)")
     p_v.add_argument("--python", default=sys.executable, help="用于执行的 python(默认当前)")
+
+    p_sent = sub.add_parser("collect-sentiment", help="情绪数据:涨停池(每日必采,仅留~3周)+两融全量回补")
+    p_sent.add_argument("--date", default=None, help="YYYY-MM-DD,默认今天")
+
+    p_aud = sub.add_parser("audit-signal", help="结论审计:NW t + bootstrap CI + 事件研究对照(随机化推断)")
+    p_aud.add_argument("--verdict", default="avoid_watch", choices=["avoid_watch", "buy_watch", "neutral"])
+    p_aud.add_argument("--window", type=int, default=5, choices=[5, 20])
+    p_aud.add_argument("--index", default="000300.SH")
+    p_aud.add_argument("--seed", type=int, default=42)
 
     p_sig = sub.add_parser("signal", help="生成指数信号(防泄漏:只用截至昨日)")
     p_sig.add_argument("--date", default=None, help="信号日 YYYY-MM-DD,默认今天")
@@ -196,6 +206,67 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         finally:
             conn.close()
+
+    if args.cmd == "collect-sentiment":
+        from .sentiment import backfill_margin, collect_zt_pool
+        conn = _db(cfg)
+        try:
+            day = date.fromisoformat(args.date) if args.date else None
+            r1 = collect_zt_pool(cfg, conn, day=day)
+            r2 = backfill_margin(cfg, conn)
+        finally:
+            conn.close()
+        print({"zt_pool": r1, "margin": r2})
+        return 0
+
+    if args.cmd == "audit-signal":
+        import json as _json
+        from . import calendar as astock_cal
+        from .audit import bootstrap_mean_ci, event_study, newey_west_t
+        from .calendar import add_trading_days
+        from .signals import load_index_closes
+
+        conn = _db(cfg)
+        try:
+            rows = conn.execute(
+                "SELECT signal_date, fwd_ret FROM forecast_log"
+                " WHERE verdict=? AND window_days=? AND judged=1",
+                (args.verdict, args.window)).fetchall()
+        finally:
+            conn.close()
+        if not rows:
+            print("无已判卷样本")
+            return 1
+        lake = resolve_path(cfg, "paths.cnequity_lake")
+        idx_rows = load_index_closes(lake, args.index)
+        closes = dict(idx_rows)
+        days = astock_cal.load_calendar_cache(resolve_path(cfg, "collect.calendar_cache"))
+        if days is None:
+            days = astock_cal.read_cnequity_calendar(lake)
+        # 全历史 T+n 前向收益(事件研究的对照池需要非信号日样本)
+        fwd_map = {}
+        for d in days:
+            if d not in closes:
+                continue
+            try:
+                tgt = add_trading_days(d, args.window, days)
+            except ValueError:
+                continue
+            if tgt in closes:
+                fwd_map[d] = closes[tgt] / closes[d] - 1.0
+        series = [r[1] for r in rows]
+        sig_days = {date.fromisoformat(r[0]) for r in rows}
+        nw = newey_west_t(series, window=args.window)
+        lo, hi = bootstrap_mean_ci(series, avg_block=args.window, B=1000, seed=args.seed)
+        es = event_study(sig_days, fwd_map, days, K=5, min_gap=args.window + 1, seed=args.seed)
+        print(_json.dumps({
+            "verdict": args.verdict, "window": args.window, "n": len(series),
+            "mean_fwd": sum(series) / len(series),
+            "nw_t": round(nw, 3) if math.isfinite(nw) else ("+inf" if nw > 0 else "-inf"),
+            "boot_ci": [round(lo, 5), round(hi, 5)],
+            "event_study": {k: (round(v, 5) if isinstance(v, float) else v) for k, v in es.items()},
+        }, ensure_ascii=False, indent=2))
+        return 0
 
     if args.cmd == "verify-poc4":
         import subprocess
