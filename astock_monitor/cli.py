@@ -1,0 +1,157 @@
+"""CLI 入口:doctor / calendar-check / collect-daily / fetch-hist / backfill / limits-check。
+
+Windows GBK 教训(csqaq #3):强制 stdout UTF-8;bat 里同时设 PYTHONUTF8=1。
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from datetime import date
+
+from .config import load_config, resolve_path
+from .store import get_conn, init_db
+
+
+def _utf8() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
+
+def _db(cfg: dict):
+    conn = get_conn(resolve_path(cfg, "paths.db"))
+    init_db(conn)
+    return conn
+
+
+def main(argv: list[str] | None = None) -> int:
+    _utf8()
+    parser = argparse.ArgumentParser(prog="astock_monitor", description="萤火计划 A 股量化监控系统")
+    parser.add_argument("--config", default=None, help="config.json 路径(默认仓库根)")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    sub.add_parser("doctor", help="七项自检")
+    sub.add_parser("calendar-check", help="日历:湖读取+新浪对拍+新鲜度(联网对拍)")
+
+    p_daily = sub.add_parser("collect-daily", help="日更:按日期全市场快照(1 请求)")
+    p_daily.add_argument("--date", default=None, help="YYYY-MM-DD,默认今天")
+
+    p_hist = sub.add_parser("fetch-hist", help="按股历史(东财 hfq;仅交叉验证/小补丁)")
+    p_hist.add_argument("--code", required=True)
+    p_hist.add_argument("--start", required=True)
+    p_hist.add_argument("--end", required=True)
+    p_hist.add_argument("--adjust", default="hfq", choices=["", "qfq", "hfq"])
+
+    p_sina = sub.add_parser("fetch-hist-sina", help="退市股回退(新浪源)")
+    p_sina.add_argument("--code", required=True)
+
+    p_bf = sub.add_parser("backfill", help="历史回填(CNEquity TDX 主源)")
+    p_bf.add_argument("--codes", default="", help="逗号分隔代码;空则需 --codes-file")
+    p_bf.add_argument("--codes-file", default="", help="每行一个代码的文本文件")
+    p_bf.add_argument("--start", required=True)
+    p_bf.add_argument("--end", required=True)
+    p_bf.add_argument("--try-run", action="store_true", help="尝试在本机执行 cne(沙箱内会被拦)")
+
+    p_lim = sub.add_parser("limits-check", help="涨跌停校验层单点验证")
+    p_lim.add_argument("--code", required=True)
+    p_lim.add_argument("--prev-close", type=float, required=True)
+    p_lim.add_argument("--price", type=float, required=True)
+    p_lim.add_argument("--side", choices=["buy", "sell"], required=True)
+    p_lim.add_argument("--name", default="")
+    p_lim.add_argument("--date", default=None)
+
+    p_v = sub.add_parser("verify-poc4", help="复跑 PoC-4 接口对齐(需 akquant)")
+    p_v.add_argument("--python", default=sys.executable, help="用于执行的 python(默认当前)")
+
+    args = parser.parse_args(argv)
+    cfg = load_config(args.config)
+
+    if args.cmd == "doctor":
+        from .doctor import print_report, run_doctor
+        conn = _db(cfg)
+        try:
+            print_report(run_doctor(cfg, conn))
+        finally:
+            conn.close()
+        return 0
+
+    if args.cmd == "calendar-check":
+        from . import calendar as cal
+        days = cal.read_cnequity_calendar(resolve_path(cfg, "paths.cnequity_lake"))
+        print(f"CNEquity 湖: {len(days)} 交易日 {days[0]}~{days[-1]}")
+        sina = cal.fetch_sina_calendar()
+        report = cal.crosscheck(days, sina)
+        print(f"新浪对拍({report['status']}): {report.get('count_a')} vs {report.get('count_b')} "
+              f"identical={report['identical']}")
+        cache = cal.cache_to_json(days, resolve_path(cfg, "collect.calendar_cache"))
+        print(f"缓存已刷新: {cache}")
+        return 0 if report["identical"] else 1
+
+    if args.cmd == "collect-daily":
+        from .collect import collect_daily
+        conn = _db(cfg)
+        try:
+            r = collect_daily(cfg, conn, day=date.fromisoformat(args.date) if args.date else None)
+        finally:
+            conn.close()
+        print(r)
+        return 0 if r["status"] in ("ok", "skipped") else 1
+
+    if args.cmd == "fetch-hist":
+        from .collect import fetch_hist
+        conn = _db(cfg)
+        try:
+            r = fetch_hist(cfg, conn, args.code, args.start, args.end, adjust=args.adjust)
+        finally:
+            conn.close()
+        print(r)
+        return 0
+
+    if args.cmd == "fetch-hist-sina":
+        from .collect import fetch_hist_sina
+        conn = _db(cfg)
+        try:
+            r = fetch_hist_sina(cfg, conn, args.code)
+        finally:
+            conn.close()
+        print(r)
+        return 0
+
+    if args.cmd == "backfill":
+        from .collect import backfill_cnequity
+        codes = [c.strip() for c in args.codes.split(",") if c.strip()]
+        if args.codes_file:
+            codes = [ln.strip() for ln in open(args.codes_file, encoding="utf-8") if ln.strip()]
+        if not codes:
+            print("必须给 --codes 或 --codes-file", file=sys.stderr)
+            return 2
+        r = backfill_cnequity(cfg, codes, args.start, args.end, try_run=args.try_run)
+        print(r)
+        return 0 if r["status"] in ("prepared", "ok") else 1
+
+    if args.cmd == "limits-check":
+        from datetime import date as _date
+        from .limits import check_order
+        d = check_order(args.side, args.price, args.prev_close, args.code,
+                        name=args.name, on_date=_date.fromisoformat(args.date) if args.date else None)
+        print(f"allowed={d.allowed} board={d.board} pct={d.pct:.2%} "
+              f"limit_up={d.limit_up:.2f} limit_down={d.limit_down:.2f}")
+        print(d.reason)
+        return 0 if d.allowed else 1
+
+    if args.cmd == "verify-poc4":
+        import subprocess
+        from pathlib import Path
+        script = Path(__file__).resolve().parent.parent / "scripts" / "verify" / "poc4_rerun.py"
+        proc = subprocess.run([args.python, str(script)], capture_output=True, text=True)
+        print(proc.stdout[-2000:])
+        if proc.returncode != 0:
+            print(proc.stderr[-1000:], file=sys.stderr)
+        return proc.returncode
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
