@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# 数据层全部本地化(data/lake 由 akshare 可独立重建,不入库)
+data/
+
+# 系统杂项
+Thumbs.db
+desktop.ini
