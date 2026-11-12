@@ -48,6 +48,18 @@
 3. LightGBM + 横截面 Rank IC 目标;上线前专审复权口径 PIT(因子公式无 PIT,风险全在数据处理)
 4. 组合层零依赖改造:TopK → **行业分层 TopK**(东方证券/光大研报背书:分层拿到优化器大部分超额)→ 逆波动率加权 + 单票 35% 上限 → 指数 vol targeting。不用 cvxpy
 
+**LightGBM 动工前 8 条检查清单(2026-11-13 调研定案,违反任何一条=过拟合加速器):**
+1. **标签口径一票否决**:T 收盘出信号→T+1 收盘成交→T+1+N 收盘(qlib Ref(-2)/Ref(-1) 同构),标签/IC/回测三处共用同一函数,禁止各写各的
+2. **标签=超额收益+截面 rank 化**(GKX 路线),放弃绝对收益标签(regime 泄漏进模型)
+3. **预处理逐日截面**:去极值(MAD×3)→中性化(行业+市值残差)→标准化,不跨期累积统计量(天然 PIT);管线版本号入实验记录
+4. **切分**:purge ≥ 标签 horizon,embargo 再加 1-2×horizon;用 skfolio CombinatorialPurgedCV(mlfinlab 已闭源勿依赖);测试集只在终审碰一次
+5. **早停指标=验证集逐日截面 Rank IC/ICIR**,不是 RMSE;可选 objective=lambdarank/xendcg + group=每日股票数
+6. **保守参数**:num_leaves≤31、max_depth 4-6、min_data_in_leaf 数百+、lr 0.01-0.05、max_bin≤128、L1/L2 打开;5-10 种子集成;搜索空间写死进 config
+7. **可交易性硬规则**:剔/标下一交易日涨跌停(三档限价分开)、停牌、ST、次新(华泰口径);涨停不可买/跌停不可卖进撮合(limits.py 已就绪)
+8. **模型记分牌**:每次训练落一条(数据版本/特征清单/标签定义/超参/种子/CPCV 各路径 IC 分布/跨折 SHAP 稳定性)——无记录的模型不许进回测
+
+**数据质量监控(调研定案):**不上 Great Expectations 全家桶(重基建错配);借 exchange_calendars 做日历对账、pandera 可选做 schema、抄 Market Data Sanity Checker 检查清单(OHLC 一致性/跳变超限价/复权断裂=因子逐日跳变/停牌语义 volume=0≠缺行);**复权对账比对涨跌幅或因子,不比价格**(Tushare FAQ 铁律);多市场统一 schema 用 ts_open_utc+trade_date_local 双字段,禁跨市场 naive date join;**yfinance 幸存者偏差使其只配研究级,不配选股回测**
+
 **AI 研究管线层(ML 基线后,1-2 周):**
 5. **不自建 agent 框架,把审计做成 agent 工具**:数据湖查询/因子 IC/记分牌/回测包成 MCP 工具(DSH 体系现成),LLM 提因子假设→写 pandas 实现→记分牌打分→回填迭代(RD-Agent 循环,验收信号换成事件研究级审计)
 6. 抄 AlphaAgent 两条正则:AST 原创性(拒重复因子)+ 表达式复杂度上限(防过拟合),~100 行
