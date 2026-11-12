@@ -29,6 +29,8 @@
   },
   "backtest": {
     "broker_profile": "cn_stock_t1_low_fee",
-    "comment": "AKQuant 试点;trading_calendar 必传(PoC-4 撮合级定案)"
+    "comment": "AKQuant 试点;trading_calendar 必传(PoC-4 撮合级定案)",
+    "cost_round_trip": 0.0020,
+    "cost_comment": "回合成本=佣金万2.5×2+印花税0.05%卖出+过户费+滑点;记分牌扣成本口径(METHODS §1)"
   }
 }
