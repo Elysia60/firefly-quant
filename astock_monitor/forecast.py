@@ -152,9 +152,14 @@ def replay(conn: sqlite3.Connection, index_rows: list[tuple[date, float]],
     closes = dict(index_rows)
     days_in_range = [d for d in trading_days if start <= d <= end]
     recorded = 0
+    skipped = 0
     for d in days_in_range:
-        sig = generate_signal(index_rows, d)
+        try:
+            sig = generate_signal(index_rows, d)
+        except ValueError:
+            skipped += 1  # 历史起点不足 21 日窗——预期形态,跳过不中断
+            continue
         recorded += record_signal(conn, sig, windows)
     judged = judge_due(conn, closes, trading_days)
-    return {"recorded_signals": recorded, "judged_rows": judged,
+    return {"recorded_signals": recorded, "skipped_days": skipped, "judged_rows": judged,
             "summary": summarize(conn)}
