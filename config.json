@@ -8,7 +8,7 @@
     "lake_raw": "data/lake/raw",
     "lake_norm": "data/lake/normalized",
     "state_dir": "data/state",
-    "cnequity_lake": "C:/Users/14676/WorkBuddy/2026-11-12-08-47-41/astock_poc/cnequity_poc/data/cnequity-demo"
+    "cnequity_lake": "data/cnequity-lake"
   },
   "collect": {
     "min_interval_seconds": 1.0,
