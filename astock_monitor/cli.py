@@ -64,6 +64,19 @@ def main(argv: list[str] | None = None) -> int:
     p_v = sub.add_parser("verify-poc4", help="复跑 PoC-4 接口对齐(需 akquant)")
     p_v.add_argument("--python", default=sys.executable, help="用于执行的 python(默认当前)")
 
+    p_sig = sub.add_parser("signal", help="生成指数信号(防泄漏:只用截至昨日)")
+    p_sig.add_argument("--date", default=None, help="信号日 YYYY-MM-DD,默认今天")
+    p_sig.add_argument("--index", default="000300.SH", help="指数符号,默认沪深300")
+
+    sub.add_parser("forecast-judge", help="判卷到期信号(T+5/T+20,真实数据,不提前猜)")
+
+    p_rp = sub.add_parser("forecast-replay", help="历史回放:生成+判卷+汇总(同一条流水线)")
+    p_rp.add_argument("--start", required=True)
+    p_rp.add_argument("--end", required=True)
+    p_rp.add_argument("--index", default="000300.SH")
+
+    sub.add_parser("forecast-summary", help="对账记分牌汇总")
+
     args = parser.parse_args(argv)
     cfg = load_config(args.config)
 
@@ -139,6 +152,49 @@ def main(argv: list[str] | None = None) -> int:
               f"limit_up={d.limit_up:.2f} limit_down={d.limit_down:.2f}")
         print(d.reason)
         return 0 if d.allowed else 1
+
+    if args.cmd in ("signal", "forecast-judge", "forecast-replay", "forecast-summary"):
+        from . import calendar as astock_cal
+        from . import forecast as F
+        from .signals import generate_signal, load_index_closes
+
+        conn = _db(cfg)
+        try:
+            F.init_db(conn)
+            lake = resolve_path(cfg, "paths.cnequity_lake")
+            if args.cmd == "signal":
+                rows = load_index_closes(lake, args.index)
+                day = date.fromisoformat(args.date) if args.date else date.today()
+                sig = generate_signal(rows, day)
+                n = F.record_signal(conn, sig)
+                import json as _json
+                print(_json.dumps(sig.as_dict(), ensure_ascii=False, indent=2))
+                print(f"落盘 {n} 行(forecast_log)")
+                return 0
+            if args.cmd == "forecast-summary":
+                import json as _json
+                print(_json.dumps(F.summarize(conn), ensure_ascii=False, indent=2))
+                return 0
+            index = getattr(args, "index", "000300.SH")
+            rows = load_index_closes(lake, index)
+            closes = dict(rows)
+            days = astock_cal.load_calendar_cache(resolve_path(cfg, "collect.calendar_cache"))
+            if days is None:
+                days = astock_cal.read_cnequity_calendar(lake)
+            if args.cmd == "forecast-judge":
+                n = F.judge_due(conn, closes, days)
+                print(f"本次判卷 {n} 条")
+                return 0
+            if args.cmd == "forecast-replay":
+                r = F.replay(conn, rows, days,
+                             date.fromisoformat(args.start), date.fromisoformat(args.end))
+            else:  # forecast-summary
+                r = F.summarize(conn)
+            import json as _json
+            print(_json.dumps(r, ensure_ascii=False, indent=2))
+            return 0
+        finally:
+            conn.close()
 
     if args.cmd == "verify-poc4":
         import subprocess

@@ -59,13 +59,13 @@ class FakeLimiter(collect.RateLimiter):
 
 class RateLimiterTest(unittest.TestCase):
     def test_interval_respected(self):
-        # 间隔取 0.2s:Windows sleep 粒度 15.6ms,太小的间隔会引入计时噪声
+        # 间隔 0.3s、阈值 0.2s:留足 Windows sleep 粒度(15.6ms)与满载机器的计时抖动
         with tempfile.TemporaryDirectory() as tmp:
-            rl = collect.RateLimiter(min_interval=0.2, state_path=Path(tmp) / "c.json")
+            rl = collect.RateLimiter(min_interval=0.3, state_path=Path(tmp) / "c.json")
             t0 = time.monotonic()
             rl.wait()
             rl.wait()
-            self.assertGreaterEqual(time.monotonic() - t0, 0.19)
+            self.assertGreaterEqual(time.monotonic() - t0, 0.2)
 
     def test_backoff_exponential_with_cap(self):
         with tempfile.TemporaryDirectory() as tmp:

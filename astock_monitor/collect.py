@@ -36,10 +36,19 @@ class RateLimitTriggered(Exception):
 
 
 def is_rate_limit_error(e: BaseException) -> bool:
-    """按类型名/消息识别东财滑窗限流(避免 import akshare 依赖)。"""
+    """识别东财滑窗限流(避免 import akshare 依赖)。
+
+    两个实测口径(2026-11-12):
+    - akshare 1.20.37 抛 Push2RateLimitError(类名含 RateLimit);
+    - 同一限流在旧版/部分路径表现为 push2 断连(RemoteDisconnected)——新版官方文案
+      "服务器断开了连接,通常是短时间内请求过多" 即指此形态,故 push2+断连也算限流。
+    """
     name = type(e).__name__
     msg = str(e)
-    return "RateLimit" in name or "RateLimit" in msg
+    if "RateLimit" in name or "RateLimit" in msg:
+        return True
+    low = msg.lower()
+    return "push2" in low and ("connection" in low or "remotedisconnected" in low or "断开" in msg)
 
 
 class RateLimiter:
