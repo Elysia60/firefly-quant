@@ -173,7 +173,8 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             if args.cmd == "forecast-summary":
                 import json as _json
-                print(_json.dumps(F.summarize(conn), ensure_ascii=False, indent=2))
+                cost = float(cfg["backtest"].get("cost_round_trip", 0.002))
+                print(_json.dumps(F.summarize(conn, cost_rt=cost), ensure_ascii=False, indent=2))
                 return 0
             index = getattr(args, "index", "000300.SH")
             rows = load_index_closes(lake, index)

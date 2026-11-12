@@ -1,8 +1,8 @@
-"""forecast.py 单测:判卷窗口跨国庆走交易日 / correct 口径 / 幂等 / 不到期不判 / 回放闭环。"""
+"""forecast.py 单测:判卷窗口跨国庆走交易日 / correct 口径 / 幂等 / 不到期不判 / 回放闭环 / n_eff 与成本。"""
 
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from astock_monitor import forecast as F
@@ -122,6 +122,57 @@ class ReplayTest(unittest.TestCase):
             for v, st in by_verdict.items():
                 self.assertIn("small_sample", st)
                 self.assertTrue(st["small_sample"])  # 回放样本 <30,诚实标注
+
+
+class ScoreboardStatsTest(unittest.TestCase):
+    """METHODS §3c 统计口径:n_eff 重叠修正 / 成本进账本层 / 敏感性三档。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.conn = get_conn(Path(self.tmp.name) / "m.db")
+        F.init_db(self.conn)
+        self.closes = _closes_from_pattern({
+            date(2026, 9, 30): 100.0,
+            date(2026, 10, 14): 110.0,
+        })
+        # 147 个 avoid 信号(名义大,n_eff 按 //5 缩),判卷后才有 fwd 可统计
+        self.days = []
+        d = date(2026, 6, 1)
+        while d <= date(2026, 12, 31):
+            if d.weekday() < 5:
+                self.days.append(d)
+            d += timedelta(days=1)
+        self.closes = {dt: 101.0 for dt in self.days}
+        for i in range(147):
+            sd = date(2026, 6, 1) + timedelta(days=i)
+            if sd.weekday() < 5:
+                F.record_signal(self.conn, S.Signal(
+                    signal_date=sd, trend_score=20.0, composite=30.0,
+                    verdict="avoid_watch", components={}, data_quality=S.DataQuality()), windows=(5,))
+        F.judge_due(self.conn, self.closes, self.days, today=date(2026, 12, 31))
+
+    def tearDown(self):
+        self.conn.close()
+        self.tmp.cleanup()
+
+    def test_n_eff_conservative_correction(self):
+        s = F.summarize(self.conn, cost_rt=0.002)
+        av = s["windows"][5]["avoid_watch"]
+        self.assertGreater(av["judged"], 100)
+        self.assertEqual(av["n_eff"], av["judged"] // 5)
+        self.assertTrue(av["small_sample"])  # n_eff < 30 → 诚实标小样本
+
+    def test_cost_in_ledger_and_sensitivity(self):
+        s = F.summarize(self.conn, cost_rt=0.002, sens_tiers=(0.001, 0.002, 0.005))
+        av = s["windows"][5]["avoid_watch"]
+        self.assertEqual(av["mean_fwd_ret"], 0.0)  # 平坦价格 101/101−1=0,口径确定无边界噪声
+        self.assertAlmostEqual(av["mean_net_ret"], -0.002, places=9)
+        self.assertAlmostEqual(av["cost_sensitivity"]["0.001"], -0.001, places=9)
+        self.assertAlmostEqual(av["cost_sensitivity"]["0.005"], -0.005, places=9)
+        # 成本正本 = config.json,CLI 口径一致
+        from astock_monitor.config import load_config
+        cfg = load_config()
+        self.assertEqual(float(cfg["backtest"]["cost_round_trip"]), 0.002)
 
 
 if __name__ == "__main__":

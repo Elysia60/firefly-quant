@@ -63,7 +63,7 @@ def render(cfg: dict) -> str:
     F.init_db(conn)
     try:
         lake = lake_stats(resolve_path(cfg, "paths.cnequity_lake"))
-        summary = F.summarize(conn)
+        summary = F.summarize(conn, cost_rt=COST_RT)
         signal = latest_signal(conn)
         years = year_split(conn)
     finally:
@@ -76,14 +76,13 @@ def render(cfg: dict) -> str:
         rate = v["correct_rate"]
         rate_s = f"{rate * 100:.1f}%" if rate is not None else "—"
         cls = "bad" if (rate is not None and rate < 0.5) else ("good" if rate is not None and rate >= 0.6 else "mid")
-        net = ""
-        if v.get("mean_fwd_ret") is not None and v["correct_rate"] is not None:
-            net_s = (v["mean_fwd_ret"] - COST_RT) * 100
+        if v.get("mean_net_ret") is not None:
+            net_s = v["mean_net_ret"] * 100
             net = f'<td class="{ "good" if net_s > 0 else "bad"}">{net_s:+.2f}%</td>'
         else:
             net = "<td>—</td>"
-        small = ' <span class="pill p-mid">小样本</span>' if v["small_sample"] else ""
-        return (f"<td>{v['judged']}{small}</td>"
+        small = ' <span class="pill p-mid">n_eff小</span>' if v["small_sample"] else ""
+        return (f"<td>{v['judged']} <span class=\"small\">(n_eff≈{v['n_eff']})</span>{small}</td>"
                 f"<td>{(v['mean_fwd_ret'] or 0) * 100:+.2f}%</td>{net}"
                 f'<td class="{cls}">{rate_s}</td>')
 
@@ -171,7 +170,7 @@ footer{{margin-top:36px;font-size:12px;color:var(--muted)}}
 
 <h2>[S1] 注册结论 · avoid_watch 反向线索(csqaq [C6] 同款)</h2>
 <div class="card">
-<div class="warnbox"><b>[S1] 陈述</b>:T+5 avoid_watch 方向正确率 42.9%(n=147)、T+20 48.6%(n=142)——均低于 50%,呈现"喊回避后市场反涨"的反向特性,与 csqaq [C6](谨慎桶反向 −15.2pp)同构。<b>状态:观察候选,不作反向交易依据</b>(单指数两年、未扣事件聚集、未过 DSR)。</div>
+<div class="warnbox"><b>[S1] 陈述</b>:T+5 avoid_watch 方向正确率 42.9%(名义 n=147,<b>n_eff≈29</b>,重叠修正后即小样本)、T+20 48.6%(n_eff≈7)——均低于 50%,呈现"喊回避后市场反涨"的反向特性,与 csqaq [C6](谨慎桶反向 −15.2pp)同构。<b>状态:观察候选,不作反向交易依据</b>(n_eff 修正后全部小样本;单指数;未过 DSR/事件研究)。</div>
 <div class="warnbox"><b>反方陈述(它最可能因什么而错)</b>:regime 混杂——2024-2026 单一样本期恰逢特定市场阶段;"回避"判定的前提(趋势走弱)本身与后续反弹存在均值回归的机械关联(同义反复风险)。<br>
 <b>推翻观测</b>:分年度子样本方向不一致(见下表)→ 撤销反向候选;新样本外月份 correct_rate ≥ 50% → 降级为"无信号"。</div>
 <table><tr><th>年度</th><th>窗口</th><th>n</th><th>方向正确率</th><th>平均前向</th></tr>{year_html}</table>

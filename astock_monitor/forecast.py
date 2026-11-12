@@ -105,9 +105,16 @@ def judge_due(conn: sqlite3.Connection, closes: dict[date, float],
     return n
 
 
-def summarize(conn: sqlite3.Connection) -> dict:
-    """按 verdict 汇总判卷结果;小样本诚实标注(n<30 时 conservative 标记)。"""
-    out: dict = {"windows": {}}
+def summarize(conn: sqlite3.Connection, cost_rt: float = 0.0020,
+              sens_tiers: tuple[float, ...] = (0.001, 0.002, 0.005)) -> dict:
+    """按 verdict 汇总判卷结果(统计口径正本 = METHODS.md §3c)。
+
+    - **n_eff(重叠修正)**:逐日滚动信号的 T+n 窗口彼此重叠,有效独立样本按
+      保守口径 n_eff = judged // window_days(csqaq L6 同款);small_sample 判据 = n_eff < 30。
+    - **成本进账本层**:mean_net = mean_fwd − cost_rt(口径=回测同款回合成本);
+      另出三档敏感性(net 在 rt 0.1%/0.2%/0.5% 下是否变号——csqaq [C8] 纪律)。
+    """
+    out: dict = {"cost_rt": cost_rt, "sens_tiers": list(sens_tiers), "windows": {}}
     for w in WINDOWS:
         rows = conn.execute(
             "SELECT verdict, COUNT(*), SUM(judged), AVG(CASE WHEN judged=1 THEN fwd_ret END),"
@@ -118,13 +125,19 @@ def summarize(conn: sqlite3.Connection) -> dict:
         for verdict, total, judged, avg_ret, correct_sum in rows:
             judged = judged or 0
             correct_sum = correct_sum or 0
+            n_eff = max(1, judged // w) if judged else 0
+            mean_net = (avg_ret - cost_rt) if avg_ret is not None else None
             by_verdict[verdict] = {
                 "total": total,
                 "judged": judged,
+                "n_eff": n_eff,
                 "mean_fwd_ret": round(avg_ret, 6) if avg_ret is not None else None,
+                "mean_net_ret": round(mean_net, 6) if mean_net is not None else None,
+                "cost_sensitivity": {str(t): round(avg_ret - t, 6) for t in sens_tiers}
+                if avg_ret is not None else None,
                 "correct": correct_sum if verdict != "neutral" else None,
                 "correct_rate": round(correct_sum / judged, 4) if judged and verdict != "neutral" else None,
-                "small_sample": judged < 30,
+                "small_sample": n_eff < 30,
             }
         out["windows"][w] = by_verdict
     return out
