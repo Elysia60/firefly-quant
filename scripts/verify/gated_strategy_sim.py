@@ -92,6 +92,13 @@ def flat_next(day: date, mode: str) -> bool:
     return False
 
 
+def target_pos(day: date, mode: str) -> float:
+    """T 日目标仓位(0/0.5/1),由 T-1 信号+门控决定。[S2] 反方②:半仓变体。"""
+    if mode in ('H', 'I') and flat_next(day, 'C' if mode == 'H' else 'E'):
+        return 0.5   # 门控(或门控+去抖)avoid → 半仓而非空仓
+    return 0.0 if flat_next(day, 'C' if mode == 'H' else 'E') else 1.0
+
+
 def simulate(mode: str) -> dict:
     nav, peak, mdd = 1.0, 1.0, 0.0
     rets, switches, flat_days = [], 0, 0
@@ -103,7 +110,7 @@ def simulate(mode: str) -> dict:
         prev = days[days.index(d) - 1] if days.index(d) > 0 else None
         if prev is None or prev not in closes:
             continue
-        pos = 0.0 if flat_next(d, mode) else 1.0
+        pos = target_pos(d, mode) if mode in ('H', 'I') else (0.0 if flat_next(d, mode) else 1.0)
         if pos != pos_prev:
             switches += 1
             nav *= (1 - COST_SIDE * abs(pos - pos_prev) * 2)  # 一开一平两次单边
@@ -128,7 +135,7 @@ def simulate(mode: str) -> dict:
 import math  # noqa: E402
 
 out = {"cost_side": COST_SIDE, "start": "2015-01-05", "index": "000300.SH",
-       "results": [simulate(m) for m in ("A", "B", "C", "D", "E", "F")]}
+       "results": [simulate(m) for m in ("A", "B", "C", "D", "E", "F", "H", "I")]}
 out_path = REPO_ROOT / "results" / "gated_strategy_sim.json"
 out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
 print(json.dumps(out, ensure_ascii=False, indent=2))
