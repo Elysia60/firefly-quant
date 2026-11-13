@@ -4,6 +4,8 @@ rem 2026-11-14: log every step and propagate the exit code.
 rem Reason: Task Scheduler reported Last Result 0 on 2026-11-13 while collection
 rem silently failed (no parquet, no log) - a green light on a broken pipeline.
 setlocal
+rem unify console+log encoding: python emits UTF-8, cmd defaults to GBK -> mojibake in one log
+chcp 65001 >nul
 set PYTHONUTF8=1
 cd /d %~dp0
 if not exist logs mkdir logs

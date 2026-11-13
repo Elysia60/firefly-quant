@@ -300,7 +300,9 @@ def collect_daily(cfg: dict, conn, day: date | None = None, fetcher=None, limite
         days = load_calendar_cache(cache)
         if days and day not in days:
             log_event(conn, "WARN", "collect_daily", f"{day} 非交易日,跳过快照")
-            return {"status": "non_trading_day", "day": day.isoformat()}
+            # status 用 skipped(CLI 的成功口径),reason 区分原因:非交易日不是错误
+            return {"status": "skipped", "reason": "non_trading_day",
+                    "day": day.isoformat(), "rows": 0}
 
     params = {"day": day.isoformat()}
     tkey = task_key("akshare", "spot_snapshot", params)

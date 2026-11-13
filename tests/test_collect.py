@@ -171,7 +171,8 @@ class CollectDailyTest(unittest.TestCase):
 
         r = collect.collect_daily(self.cfg, self.conn, day=date(2026, 11, 14),
                                    fetcher=fetcher, limiter=self._limiter())
-        self.assertEqual(r["status"], "non_trading_day")
+        self.assertEqual(r["status"], "skipped")       # CLI 成功口径
+        self.assertEqual(r["reason"], "non_trading_day")
         self.assertEqual(calls, [])
 
     def test_fetch_hist_sina_fallback(self):
