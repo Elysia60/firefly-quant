@@ -33,8 +33,10 @@
 - 不污染生产湖的全链路校验脚本：`C:\Users\14676\Documents\Codex\_tmp_astock\verify_write.py`
   （建临时 cfg，跑 collect_daily，检查三份 parquet 后打印 VERDICT）
 
-## 另：日更脚本仍缺 signal / forecast-judge
+## 日更闭环：已由 03ab54e 补齐（本文件原写"缺 signal/forecast-judge"已过时）
 
-`run_daily.bat` 目前只有 doctor → collect-daily → collect-sentiment。
-信号与判卷要在 `cli.py` 的 `--require-session` 守卫落地后再接（否则周末会往 forecast_log 写伪信号）；
-当前仓库里 `astock_monitor/calendar.py` 与 `cli.py` 有他人未提交改动，本次未触碰。
+另一位协作者在 03ab54e 里把 `run_daily.bat` 扩成七步：
+doctor → collect-daily → collect-sentiment → **signal --require-session** → **forecast-judge**
+→ forecast-summary（落 `data/state/scoreboard_daily.json`）→ build_dashboard。
+`--require-session` 守卫（`calendar.is_session_day`）保证非交易日 fail-closed 跳过，不会往
+forecast_log 写伪信号。本文件保留该段是为了记录"当时为什么没接"——现在的答案是：别人接了，且接得对。
