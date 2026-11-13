@@ -1,0 +1,85 @@
+{
+  "n_events": 1450,
+  "y1_rate": 0.4703,
+  "calibration": [
+    {
+      "p_bucket": 0.405,
+      "actual_y1": 0.448,
+      "n": 145
+    },
+    {
+      "p_bucket": 0.423,
+      "actual_y1": 0.421,
+      "n": 145
+    },
+    {
+      "p_bucket": 0.437,
+      "actual_y1": 0.524,
+      "n": 145
+    },
+    {
+      "p_bucket": 0.45,
+      "actual_y1": 0.448,
+      "n": 145
+    },
+    {
+      "p_bucket": 0.461,
+      "actual_y1": 0.455,
+      "n": 145
+    },
+    {
+      "p_bucket": 0.474,
+      "actual_y1": 0.483,
+      "n": 145
+    },
+    {
+      "p_bucket": 0.489,
+      "actual_y1": 0.497,
+      "n": 145
+    },
+    {
+      "p_bucket": 0.508,
+      "actual_y1": 0.476,
+      "n": 145
+    },
+    {
+      "p_bucket": 0.526,
+      "actual_y1": 0.497,
+      "n": 145
+    },
+    {
+      "p_bucket": 0.557,
+      "actual_y1": 0.455,
+      "n": 145
+    }
+  ],
+  "results": [
+    {
+      "mode": "A",
+      "nav": 1.1444,
+      "ann_ret": 0.0114,
+      "sharpe": 0.16,
+      "max_dd": -0.467,
+      "switches": 0,
+      "flat_days": 0
+    },
+    {
+      "mode": "C",
+      "nav": 0.132,
+      "ann_ret": -0.157,
+      "sharpe": -0.262,
+      "max_dd": -0.872,
+      "switches": 744,
+      "flat_days": 1436
+    },
+    {
+      "mode": "V0",
+      "nav": 0.3715,
+      "ann_ret": -0.0801,
+      "sharpe": 0.051,
+      "max_dd": -0.7579,
+      "switches": 438,
+      "flat_days": 416
+    }
+  ]
+}
