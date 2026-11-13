@@ -1,6 +1,6 @@
 # 萤火计划 · 项目全书
 
-> 版本 v0.1 · 2026-11-13 · 四天战记整合本
+> 版本 v0.2 · 2026-11-13 · 五天战记整合本
 > csqaq-monitor 第四代 · 股市版 · 本文是全部项目资料的**唯一入口**,各文档为分卷
 > 核心理念:**飞蛾扑火,向死而生**——结论必须可对账,负面结论原样入注册表
 
@@ -8,7 +8,7 @@
 
 ## 一、这是什么(一句话)
 
-**A 股市场的"防自欺机器"**:一套把每个市场信念自动送进审判(对账→事件研究→regime 门控→显著性检验)、无论生死都原样记账的量化研究系统。它不承诺赚钱——它承诺**你手里没有一个没被审过的信念**。
+**A 股市场的"防自欺机器"**:一套把每个市场信念自动送进审判(对账→事件研究→regime 门控→显著性检验→meta-labeling)、无论生死都原样记账的量化研究系统。它不承诺赚钱——它承诺**你手里没有一个没被审过的信念**。
 
 **定位声明**:风险监控与研究基座,不是盈利策略引擎;不构成投资建议,不公开荐股。
 
@@ -23,6 +23,7 @@
 | **D2 对账记分牌** | signals 三分项 + forecast 自动判卷(T+5/T+20 交易日窗)+ 首份真实记分牌;**[S1] 发现**:avoid 反向线索 42.9% |
 | **D3 审判深化** | n_eff 重叠修正(揭穿 buy n_eff=1)+ 成本进账本 + 指数 12 年回填(2917 天)+ 全历史回放 5792 信号;[S1] 三审定案(v1 反向→v2 regime→v3 相对弱势 p=0.001) |
 | **D4 门控终审** | regime.py(年线滞回+宽度+波动三票二)+ 信号 v3 三分项全腿(两融贪婪度)+ **[S1] 终审(分庭:bull 无信息/neutral −1.33pp/bear −1.01pp,三重信号定义复现)**+ **[S2] 负面结论**(日频开关全变体被证伪,含显著性检验)+ **[S3] 候选**(月末效应,多重校正后边缘)+ 八轮侦察全归队 |
+| **D5 元标签与风控** | [S1]反方①波动率匹配通过(收缩率 29.2%)+ audit strata 分层 + riskfactors 四因子(Beta/RSTR/DASTD/Amihud)+ **P8-V0 实弹:meta-labeling 无判别力→[S4] 负面注册** + 计划任务 astock-daily 上线 + 项目全书 |
 
 ---
 
@@ -40,6 +41,8 @@ astock-monitor/(21 提交,98 测全绿)
 │   ├── regime.py            门控引擎(年线滞回 1.01/0.96+宽度+波动,三票二+5日去抖)
 │   ├── audit.py             审计三件套(NW HAC t/stationary bootstrap/事件研究置换)
 │   ├── sentiment.py         涨停池每日抢救+两融回补+宽度历史回算
+│   ├── regime.py            已并入上文;riskfactors.py Barra 纯价量四因子(Beta/RSTR/DASTD/Amihud)
+│   ├── metamdl.py           meta-labeling 引擎(YZ 波动/triple-barrier/IRLS/purged 折)
 │   └── doctor.py/cli.py     七项自检+九个子命令
 ├── scripts/verify/          poc4_rerun/crosscheck_sina/regime_audit/gated_strategy_sim/calendar_audit
 ├── results/                 四份判定书(JSON,全部可复现)
@@ -62,6 +65,8 @@ astock-monitor/(21 提交,98 测全绿)
 | [S2]-反方 | ①多起点 bootstrap 未做;②半仓+走廊若翻正改写为条件式(半仓已测:不救) | 开放推翻观测 |
 | [S3] | 月末效应候选:倒数第 2 交易日 T+5 +0.53pp;**p_raw=0.029,Bonferroni×2 后 0.058 边缘未过线**;n_eff≈28 | 候选(边缘) |
 | 春节 | 方向与文献一致(节后 +0.84pp)但 n=13 分辨力不足 | 观察中,不构成依据 |
+| [S4] | meta-labeling V0 无判别力(校准表平坦,OOS 无技能;策略改善=机械执行更少) | 已证明(负面,V0);V1 强特征开放 |
+| [S1]-反方① | 波动率匹配对照:收缩率 29.2%<50% → 信息独立于波动状态 | 检验通过 ✅ |
 
 **注册表精神**:负面结论占一半;每条带反方陈述与推翻观测;引用数字必须能追溯到 METHODS.md 或 results/ 原始行。
 
@@ -100,7 +105,7 @@ astock-monitor/(21 提交,98 测全绿)
 ## 七、验证与复现
 
 ```bash
-python -m unittest discover -s tests -t .     # 98 测,零联网
+python -m unittest discover -s tests -t .     # 115 测,零联网
 python -m astock_monitor.cli doctor           # 七项自检
 python -m astock_monitor.cli signal / forecast-summary
 python -m astock_monitor.cli audit-signal --verdict avoid_watch --window 5
@@ -117,7 +122,7 @@ python scripts/build_dashboard.py             # 看板(零 CDN 单文件)
 
 ## 八、路线图(P1-P7 定案,详见 optimization-roadmap.md)
 
-P1 情绪分深化(两融斜率已接/龙虎榜 2005 起回补/大宗)→ P2 审计升级(DSR 对拍/SPA)→ P3 regime 门控复验(个股 12 年全量后)→ P4 自动化闭环(schtasks/备份/DSH MCP 插件/NapCatQQ)→ P5 ML 层(8 条检查清单+40 因子+行业分层 TopK)→ P6 风险模型(纯价量 5 因子+%var 列+仓位三选最小)→ P7 日历清单扩展(两会 placebo/缴税日/制度断点分期)
+P1 情绪分深化(两融斜率已接/龙虎榜 2005 起回补/大宗)→ P2 审计升级(DSR 对拍/SPA)→ P3 regime 门控复验(个股 12 年全量后)→ P4 自动化闭环(schtasks ✅ astock-daily 已上线/备份/DSH MCP 插件/NapCatQQ)→ P5 ML 层(8 条检查清单+40 因子+行业分层 TopK)→ P6 风险模型(纯价量 5 因子+%var 列+仓位三选最小)→ P7 日历清单扩展(两会 placebo/缴税日/制度断点分期)
 
 **数据接口优先级**(边际价值=深度×信噪比×可持续性):股本快照(补 Size,最高)> 龙虎榜 > 大宗 > 资金流(只攒数)> 北向(零)
 
@@ -125,7 +130,7 @@ P1 情绪分深化(两融斜率已接/龙虎榜 2005 起回补/大宗)→ P2 审
 
 ## 九、已知局限(全量)
 
-L1 宽度历史自回算起(口径=800 只成分) / L2 退市股股本换手缺失 / L3 EM 限流未独立复验(~5min 级冷却已实测) / L4 CNEquity 单贡献者(原始层可 akshare 重建) / L5 历史 ST 无 PIT / L6 幸存者偏差(成分口径) / L7 regime 特征随数据完整度漂移([S2]-F 教训) / L8 个股湖 196 万行(12 年全量 ~280 万,续传可补)
+L1 宽度历史自回算起(口径=800 只成分) / L2 退市股股本换手缺失 / L3 EM 限流未独立复验(~5min 级冷却已实测) / L4 CNEquity 单贡献者(原始层可 akshare 重建) / L5 历史 ST 无 PIT / L6 幸存者偏差(成分口径) / L7 regime 特征随数据完整度漂移([S2]-F 教训) / L8 个股湖 196 万行(12 年全量 ~280 万,续传可补) / L9 龙虎榜 EM 源暂不可用(result=None,待冷却或换交易所官网源)
 
 ---
 
