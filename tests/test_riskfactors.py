@@ -75,5 +75,83 @@ class RiskFactorTest(unittest.TestCase):
         self.assertEqual(len(out), len(bars))
 
 
+class DecompositionTest(unittest.TestCase):
+    """P6 记分牌 %var 两列: _daily_decomposition 公式与 factor_attribution 聚合。"""
+
+    def setUp(self):
+        import numpy as np
+        import pandas as pd
+        from datetime import date, timedelta
+
+        self.np = np
+        self.pd = pd
+        self.days = [date(2024, 1, 1) + timedelta(days=i) for i in range(40)]
+
+    def _cs(self, betas, rets, idx_ret):
+        """当日截面帧(beta/因子列可给常数)。"""
+        n = len(betas)
+        return self.pd.DataFrame({
+            "symbol": [f"S{i}" for i in range(n)],
+            "ret": rets, "beta": betas,
+            "rstr": [0.1] * n, "dastd": [0.02] * n, "amihud": [1.0] * n,
+        })
+
+    def test_pct_var_pure_common(self):
+        # ret_i = beta_i·r_m 精确成立 → 特异方差=0 → pct_var_common=1
+        betas = [0.5, 0.8, 1.0, 1.2, 1.5, 2.0, 0.3, 0.9, 1.1, 1.7]
+        rets = [b * 0.02 for b in betas]
+        dec = RF._daily_decomposition(self._cs(betas, rets, 0.02), 0.02)
+        self.assertEqual(dec["pct_var_common"], 1.0)
+
+    def test_pct_var_pure_idio(self):
+        # beta 全为 0 → common=0 → pct_var_common=0
+        betas = [0.0] * 10
+        rets = [0.01 * ((-1) ** i) for i in range(10)]
+        dec = RF._daily_decomposition(self._cs(betas, rets, 0.02), 0.02)
+        self.assertEqual(dec["pct_var_common"], 0.0)
+
+    def test_pct_var_none_when_beta_missing(self):
+        # beta 全 NaN → 诚实缺列 None(不造数)
+        cs = self._cs([0.5] * 10, [0.01] * 10, 0.02)
+        cs["beta"] = self.np.nan
+        dec = RF._daily_decomposition(cs, 0.02)
+        self.assertIsNone(dec["pct_var_common"])
+
+    def test_factor_ls_beta_monotone(self):
+        # 收益完全由 beta 驱动(ret=b·r_m) → beta 因子多空 = (b_hi−b_lo)·r_m > 0
+        betas = [0.1 * i for i in range(1, 13)]
+        rets = [b * 0.02 for b in betas]
+        dec = RF._daily_decomposition(self._cs(betas, rets, 0.02), 0.02, quantiles=3)
+        self.assertIsNotNone(dec["factor_ls"]["beta"])
+        self.assertGreater(dec["factor_ls"]["beta"], 0.0)
+        # rstr 全组同值 → 高低组收益相同 → LS=0
+        self.assertEqual(dec["factor_ls"]["rstr"], 0.0)
+
+    def test_small_cross_section_none(self):
+        dec = RF._daily_decomposition(self._cs([1.0] * 5, [0.01] * 5, 0.02), 0.02)
+        self.assertIsNone(dec)
+
+    def test_attribution_aggregates_days(self):
+        # 两天合成数据走完整 factor_attribution 流水(聚合均值)。
+        # 指数收益必须有波动: 常数收益 → var_m=0 → beta 除零 NaN(钉死这个坑)。
+        rows = []
+        idx_ret_by_date = {}
+        for t, d in enumerate(self.days):
+            r_m = 0.01 + 0.002 * ((-1) ** t)
+            idx_ret_by_date[d] = r_m
+        for sym_i in range(12):
+            beta = 0.5 + 0.1 * sym_i
+            px = 50.0
+            for d in self.days:
+                px *= 1 + beta * idx_ret_by_date[d]  # 收益纯 beta 驱动
+                rows.append((d, f"S{sym_i}", px, 1e6))
+        bars = self.pd.DataFrame(rows, columns=["trade_date", "symbol", "close", "amount"])
+        att = RF.factor_attribution(bars, idx_ret_by_date, self.days[-2:], window=10)
+        self.assertEqual(att["n_days"], 2)
+        # 收益纯 beta 驱动 → 公共方差占优
+        self.assertGreater(att["pct_var_common"], 0.5)
+        self.assertIsNotNone(att["factor_ls"]["beta"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -199,7 +199,43 @@ def main(argv: list[str] | None = None) -> int:
             if args.cmd == "forecast-summary":
                 import json as _json
                 cost = float(cfg["backtest"].get("cost_round_trip", 0.002))
-                summary = _json.dumps(F.summarize(conn, cost_rt=cost), ensure_ascii=False, indent=2)
+                summ = F.summarize(conn, cost_rt=cost)
+                # P6 记分牌两列: 因子 vs 特异 %var + 逐因子收益贡献(堵风格暴露冒充 alpha)
+                try:
+                    from .riskfactors import factor_attribution
+                    judged = conn.execute(
+                        "SELECT DISTINCT verdict, signal_date FROM forecast_log WHERE judged=1"
+                    ).fetchall()
+                    days_by_verdict: dict = {}
+                    for verdict, sd in judged:
+                        days_by_verdict.setdefault(verdict, []).append(date.fromisoformat(sd))
+                    if days_by_verdict:
+                        import pandas as pd  # noqa: PLC0415
+                        lake = resolve_path(cfg, "paths.cnequity_lake")
+                        parts = sorted((lake / "curated" / "daily_bars").glob("trade_date=*/*.parquet"))
+                        if parts:
+                            # 30 个月度分区 ≈ 2.5 年: 覆盖 252 日因子回看窗口 + 21 日 RSTR 滞后
+                            bars = pd.concat(
+                                (pd.read_parquet(f, columns=["symbol", "trade_date", "close", "amount"])
+                                 for f in parts[-30:]), ignore_index=True)
+                            bars["trade_date"] = pd.to_datetime(bars["trade_date"]).dt.date
+                            idx_rows = load_index_closes(lake, getattr(args, "index", "000300.SH"))
+                            idx_ret = {d: rows[i + 1][1] / rows[i][1] - 1.0
+                                       for i, (d, _c) in enumerate(rows[:-1])} if (rows := idx_rows) else {}
+                            all_days = sorted({d for ds in days_by_verdict.values() for d in ds})
+                            att_all = factor_attribution(bars, idx_ret, all_days)
+                            summ["factor_attribution"] = {
+                                "overall": att_all,
+                                "by_verdict_days": {v: len(ds) for v, ds in days_by_verdict.items()},
+                            }
+                        else:
+                            summ["factor_attribution"] = {"status": "no_lake_data"}
+                    else:
+                        summ["factor_attribution"] = {"status": "no_judged_signals"}
+                except Exception as e:  # noqa: BLE001
+                    summ["factor_attribution"] = {"status": "unavailable",
+                                                  "detail": f"{type(e).__name__}: {e}"}
+                summary = _json.dumps(summ, ensure_ascii=False, indent=2)
                 print(summary)
                 if getattr(args, "out", None):
                     from pathlib import Path as _Path

@@ -66,3 +66,97 @@ def compute_risk_factors(bars: "object", idx_ret_by_date: dict,
     out = df[["symbol", "trade_date", "beta", "rstr", "dastd", "amihud"]].copy()
     out = out.rename(columns={"trade_date": "date"})
     return out
+
+
+FACTORS = ("beta", "rstr", "dastd", "amihud")
+
+
+def _daily_decomposition(day_cs: "object", idx_ret: float,
+                         quantiles: int = 5) -> dict | None:
+    """单日截面分解(P6 记分牌 %var 两列的核心,纯函数便于测试)。
+
+    day_cs: DataFrame(symbol, ret, beta, rstr, dastd, amihud)(当日截面,NaN 已滤);
+    idx_ret: 当日指数收益。
+    - %var: r_i = beta_i·r_m + ε_i → var_common/(var_common+var_idio),按 stocks 方差(总体口径);
+      beta 全缺失/指数缺 → None(诚实缺列,不造数)。
+    - 逐因子收益贡献 V0 = 每因子分位数多空组合日收益(高组均值−低组均值);
+      诚实声明: 单变量口径、未正交化、未估纯因子收益——只堵"风格暴露冒充 alpha"的第一层。
+    """
+    import numpy as np  # noqa: PLC0415
+
+    n = len(day_cs)
+    if n < 10:
+        return None
+    out: dict = {"n_stocks": n}
+    beta = day_cs["beta"].to_numpy(dtype=float)
+    ret = day_cs["ret"].to_numpy(dtype=float)
+    if np.isfinite(beta).sum() >= 10 and idx_ret is not None and np.isfinite(idx_ret):
+        common = np.nan_to_num(beta, nan=0.0) * idx_ret
+        idio = ret - common
+        var_c = float(np.var(common))
+        var_i = float(np.var(idio))
+        denom = var_c + var_i
+        out["pct_var_common"] = round(var_c / denom, 4) if denom > 0 else None
+    else:
+        out["pct_var_common"] = None
+    ls = {}
+    for f in FACTORS:
+        v = day_cs[f].to_numpy(dtype=float)
+        mask = np.isfinite(v)
+        if mask.sum() < quantiles * 2:
+            ls[f] = None
+            continue
+        vv, rr = v[mask], ret[mask]
+        q = np.quantile(vv, np.linspace(0, 1, quantiles + 1))
+        # 最低组与最高组的成员(边界值并入低组,与常见分组一致)
+        hi_mask = vv >= q[-2]
+        lo_mask = vv <= q[1]
+        if hi_mask.sum() and lo_mask.sum():
+            ls[f] = round(float(rr[hi_mask].mean() - rr[lo_mask].mean()), 6)
+        else:
+            ls[f] = None
+    out["factor_ls"] = ls
+    return out
+
+
+def factor_attribution(bars: "object", idx_ret_by_date: dict,
+                       days: list, quantiles: int = 5,
+                       window: int = WINDOW, mom_lag: int = MOMENTUM_LAG) -> dict:
+    """对给定信号日集合做因子归因聚合(P6 记分牌两列的湖侧计算)。
+
+    bars: DataFrame(symbol, trade_date, close, amount);days: 想归因的 date 列表
+    (通常=forecast_log 里某 verdict 的 judged signal_date);window/mom_lag 透传
+    compute_risk_factors(合成短数据测试可调小)。
+    返回 {"n_days": 实际归因日数, "pct_var_common": 逐日均值,
+          "factor_ls": {factor: 逐日均值}}——日级结果取均值,缺失日不计入并如实报告。
+    """
+    import pandas as pd  # noqa: PLC0415
+
+    rf = compute_risk_factors(bars, idx_ret_by_date, window=window, mom_lag=mom_lag)
+    rf["date"] = pd.to_datetime(rf["date"]).dt.date
+    bars2 = bars.copy()
+    bars2["trade_date"] = pd.to_datetime(bars2["trade_date"]).dt.date
+    bars2 = bars2.sort_values(["symbol", "trade_date"])
+    bars2["ret"] = bars2.groupby("symbol")["close"].pct_change()
+    merged = bars2[["symbol", "trade_date", "ret"]].merge(
+        rf, left_on=["symbol", "trade_date"], right_on=["symbol", "date"], how="inner")
+
+    per_day = {}
+    for d in days:
+        cs = merged[merged["trade_date"] == d]
+        if cs.empty:
+            continue
+        dec = _daily_decomposition(cs, idx_ret_by_date.get(d), quantiles=quantiles)
+        if dec is not None:
+            per_day[d] = dec
+    if not per_day:
+        return {"n_days": 0, "pct_var_common": None, "factor_ls": {f: None for f in FACTORS}}
+
+    pvs = [v["pct_var_common"] for v in per_day.values() if v["pct_var_common"] is not None]
+    agg: dict = {"n_days": len(per_day),
+                 "pct_var_common": round(sum(pvs) / len(pvs), 4) if pvs else None}
+    agg["factor_ls"] = {}
+    for f in FACTORS:
+        vals = [v["factor_ls"][f] for v in per_day.values() if v["factor_ls"][f] is not None]
+        agg["factor_ls"][f] = round(sum(vals) / len(vals), 6) if vals else None
+    return agg
