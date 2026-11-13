@@ -143,7 +143,130 @@ def check_deps() -> dict:
     return {"name": "deps", "status": "PASS", "detail": "; ".join(detail)}
 
 
-def run_doctor(cfg: dict, conn=None) -> dict:
+def check_dq_calendar(cfg: dict) -> dict:
+    """DQ-1 日历对账(roadmap 定案: exchange_calendars XSHG 为独立第三方口径)。
+    湖日历 vs XSHG 会话表在覆盖窗口内逐日比对;分歧 WARN 不 FAIL(可能是覆盖率伪影)。
+    离线计算,零网络。"""
+    try:
+        import exchange_calendars as xc  # noqa: PLC0415
+    except Exception:  # noqa: BLE001
+        return {"name": "dq_calendar", "status": "WARN",
+                "detail": "exchange_calendars 未安装——日历对账缺独立第三方源"}
+    try:
+        import pandas as pd  # noqa: PLC0415
+        days = read_cnequity_calendar(resolve_path(cfg, "paths.cnequity_lake"))
+    except Exception as e:  # noqa: BLE001
+        return {"name": "dq_calendar", "status": "WARN", "detail": f"湖日历不可读,跳过对账: {e}"}
+    lo, hi = min(days), max(days)
+    try:
+        cal = xc.get_calendar("XSHG")
+        # 对账窗口裁到双方交集(XSHG 默认 bound 只到今年末,湖可能更长)
+        hi_eff = min(pd.Timestamp(hi), pd.Timestamp(cal.last_session))
+        sessions = cal.sessions_in_range(pd.Timestamp(lo), hi_eff)
+        xshg = {d.date() for d in sessions}
+    except Exception as e:  # noqa: BLE001
+        return {"name": "dq_calendar", "status": "WARN", "detail": f"XSHG 会话表不可用: {e}"}
+    lake_set = set(days)
+    lake_set_cmp = {d for d in lake_set if d <= hi_eff.date()}
+    only_lake = sorted(lake_set_cmp - xshg)
+    only_xshg = sorted(xshg - lake_set_cmp)
+    if not only_lake and not only_xshg:
+        return {"name": "dq_calendar", "status": "PASS",
+                "detail": f"湖日历 {lo}~{hi_eff.date()} 与 XSHG {len(xshg)} 个交易日零分歧"
+                          f"(湖总覆盖 {len(lake_set)} 日)"}
+    return {"name": "dq_calendar", "status": "WARN",
+            "detail": f"日历分歧: 仅湖={len(only_lake)} 仅XSHG={len(only_xshg)}"
+                      f" (湖侧样例 {[str(d) for d in only_lake[:3]]}"
+                      f" / XSHG侧样例 {[str(d) for d in only_xshg[:3]]})"}
+
+
+def check_dq_returns(cfg: dict, fetcher=None) -> dict:
+    """DQ-2 复权对账(roadmap 定案铁律: **比涨跌幅,不比价格**)。
+    抽湖内一只股最近 ~90 个交易日,与新浪不复权 close 的 pct_change 对拍;
+    双侧 |pct|<=0.11 的正常日才进比对(对称剔除除权日),容差 1e-3。
+    网络失败 WARN 跳过;>1% 的巨差 FAIL(数据污染级别)。fetcher 可注入供零联网测试。"""
+    norm_parts = sorted((resolve_path(cfg, "paths.cnequity_lake")
+                         / "curated" / "daily_bars").glob("trade_date=*/*.parquet"))
+    if not norm_parts:
+        return {"name": "dq_returns", "status": "WARN", "detail": "湖无 daily_bars,涨跌幅对账无样本"}
+    try:
+        import pandas as pd  # noqa: PLC0415
+        df = pd.concat((pd.read_parquet(f, columns=["symbol", "trade_date", "close"])
+                        for f in norm_parts[-3:]), ignore_index=True)
+    except Exception as e:  # noqa: BLE001
+        return {"name": "dq_returns", "status": "WARN", "detail": f"湖不可读: {e}"}
+    if df.empty:
+        return {"name": "dq_returns", "status": "WARN", "detail": "湖 daily_bars 为空"}
+    df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.date  # 与第二源统一为 date 型
+    sym = sorted(df["symbol"].unique())[0]
+    sub = df[df["symbol"] == sym].sort_values("trade_date").tail(90)
+    code6 = sym.split(".")[0]
+    if fetcher is None:
+        def fetcher(code6=code6):
+            import akshare as ak  # noqa: PLC0415
+            from .collect import symbol_sina
+            raw = ak.stock_zh_a_daily(symbol=symbol_sina(code6))
+            raw["trade_date"] = pd.to_datetime(raw["date"]).dt.date
+            return raw[["trade_date", "close"]]
+    try:
+        ext = fetcher(code6)
+    except Exception as e:  # noqa: BLE001
+        return {"name": "dq_returns", "status": "WARN",
+                "detail": f"第二源({sym})不可达,对账跳过: {type(e).__name__}"}
+    lake_pct = sub.set_index("trade_date")["close"].pct_change()
+    ext_s = pd.Series(ext["close"].values, index=pd.Index(ext["trade_date"], name="trade_date"),
+                      name="close").sort_index()
+    ext_pct = ext_s.pct_change()
+    joined = pd.DataFrame({"lake": lake_pct, "ext": ext_pct}).dropna()
+    normal = joined[(joined["lake"].abs() <= 0.11) & (joined["ext"].abs() <= 0.11)]
+    if normal.empty:
+        return {"name": "dq_returns", "status": "WARN",
+                "detail": f"{sym} 无可比对正常日(样本 {len(joined)} 天全被剔除)"}
+    diff = (normal["lake"] - normal["ext"]).abs()
+    worst = float(diff.max())
+    n_over = int((diff > 1e-3).sum())
+    if worst > 0.01:
+        return {"name": "dq_returns", "status": "FAIL",
+                "detail": f"{sym} {len(normal)} 天涨跌幅对拍出现巨差 max={worst:.4f}——数据污染,禁止出结论"}
+    if n_over:
+        return {"name": "dq_returns", "status": "WARN",
+                "detail": f"{sym} {len(normal)} 天对拍 {n_over} 天超容差 1e-3 (max={worst:.5f})——检查复权口径"}
+    return {"name": "dq_returns", "status": "PASS",
+            "detail": f"{sym} {len(normal)} 天涨跌幅对拍一致 (max diff={worst:.2e})"}
+
+
+def check_dq_sanity(cfg: dict) -> dict:
+    """DQ-3 Market Data Sanity 清单(roadmap 定案: OHLC 一致性/跳变超限价/非正价格)。
+    只查最近 2 个月度分区(控制耗时);违例=数据污染,FAIL。无数据 WARN。"""
+    parts = sorted((resolve_path(cfg, "paths.cnequity_lake")
+                    / "curated" / "daily_bars").glob("trade_date=*/*.parquet"))
+    if not parts:
+        return {"name": "dq_sanity", "status": "WARN", "detail": "湖无 daily_bars,sanity 无样本"}
+    try:
+        import pandas as pd  # noqa: PLC0415
+        df = pd.concat((pd.read_parquet(f) for f in parts[-2:]), ignore_index=True)
+    except Exception as e:  # noqa: BLE001
+        return {"name": "dq_sanity", "status": "WARN", "detail": f"湖不可读: {e}"}
+    if df.empty:
+        return {"name": "dq_sanity", "status": "WARN", "detail": "湖 daily_bars 为空"}
+    bad_ohlc = int(((df["high"] < df[["open", "close"]].max(axis=1))
+                    | (df["low"] > df[["open", "close"]].min(axis=1))
+                    | (df["high"] < df["low"])).sum())
+    bad_price = int((df["close"] <= 0).sum())
+    df = df.sort_values(["symbol", "trade_date"])
+    pct = df.groupby("symbol")["close"].pct_change()
+    # 跳变超限价: 全板块涨停上限 30%(北交所)+余量 → 0.35;每 symbol 首日无前收自动 NaN
+    bad_jump = int((pct.abs() > 0.35).sum())
+    violations = bad_ohlc + bad_price + bad_jump
+    if violations:
+        return {"name": "dq_sanity", "status": "FAIL",
+                "detail": f"最近 {len(parts[-2:])} 分区 {len(df)} 行: OHLC 违例 {bad_ohlc},"
+                          f" 非正价格 {bad_price}, 跳变超限 {bad_jump}——数据污染级,禁止出结论"}
+    return {"name": "dq_sanity", "status": "PASS",
+            "detail": f"最近 {len(parts[-2:])} 分区 {len(df)} 行: OHLC/价格/涨跌幅三清洁"}
+
+
+def run_doctor(cfg: dict, conn=None, fetcher=None) -> dict:
     checks = [
         check_paths(cfg),
         check_cnequity_lake(cfg),
@@ -152,6 +275,9 @@ def run_doctor(cfg: dict, conn=None) -> dict:
         check_lake_integrity(cfg, conn),
         check_limits_sample(cfg),
         check_deps(),
+        check_dq_calendar(cfg),
+        check_dq_returns(cfg, fetcher=fetcher),
+        check_dq_sanity(cfg),
     ]
     overall = "PASS" if all(c["status"] != "FAIL" for c in checks) else "FAIL"
     report = {"overall": overall, "generated_at": _now_iso(), "checks": checks}
