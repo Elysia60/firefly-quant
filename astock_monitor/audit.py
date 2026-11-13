@@ -81,6 +81,7 @@ def bootstrap_mean_ci(series: list[float], avg_block: int, B: int = 1000,
 def event_study(signal_days: set, forward_returns: dict,
                 all_days: list, K: int = 5, B: int = 1000,
                 min_gap: int = 20, match_weekday: bool = True,
+                strata: dict | None = None,
                 seed: int = 42) -> dict:
     """信号日 vs 同条件随机对照日的置换检验(随机化推断)。
 
@@ -110,20 +111,29 @@ def event_study(signal_days: set, forward_returns: dict,
         if any(abs((d - e).days) <= min_gap for e in used):
             continue
         pool.append(d)
-    if match_weekday:
-        # 分星期几分桶,对照按信号日的星期构成抽样
-        by_wd: dict[int, list] = {}
+    if match_weekday or strata is not None:
+        # 分层匹配:键 = (星期几[, 状态层])——strata 提供额外匹配维度(如波动率分位桶)
+        def key_of(d):
+            parts = []
+            if match_weekday:
+                parts.append(d.weekday())
+            if strata is not None:
+                parts.append(strata.get(d, "NA"))
+            return tuple(parts)
+
+        by_key: dict[tuple, list] = {}
         for d in pool:
-            by_wd.setdefault(d.weekday(), []).append(d)
-        rng.shuffle(pool)
+            by_key.setdefault(key_of(d), []).append(d)
+        for k in by_key:
+            rng.shuffle(by_key[k])
         control_days = []
-        need_by_wd: dict[int, int] = {}
+        need_by_key: dict[tuple, int] = {}
         for e in used:
             if e in forward_returns:
-                need_by_wd[e.weekday()] = need_by_wd.get(e.weekday(), 0) + 1
-        for wd, need in need_by_wd.items():
-            cands = [d for d in pool if d.weekday() == wd]
-            control_days.extend(cands[:need * K])  # 每信号 K 个对照,提升置换功效
+                need_by_key[key_of(e)] = need_by_key.get(key_of(e), 0) + 1
+        for key, need in need_by_key.items():
+            cands = by_key.get(key, [])
+            control_days.extend(cands[:need * K])
         control = [forward_returns[d] for d in control_days if d in forward_returns]
     else:
         control = [forward_returns[d] for d in pool[: K * len(used)] if d in forward_returns]
