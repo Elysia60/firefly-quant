@@ -38,14 +38,23 @@ class RateLimitTriggered(Exception):
 def is_rate_limit_error(e: BaseException) -> bool:
     """识别东财滑窗限流(避免 import akshare 依赖)。
 
-    两个实测口径(2026-11-12):
+    三个实测口径(2026-11-12 / 2026-11-14):
     - akshare 1.20.37 抛 Push2RateLimitError(类名含 RateLimit);
     - 同一限流在旧版/部分路径表现为 push2 断连(RemoteDisconnected)——新版官方文案
-      "服务器断开了连接,通常是短时间内请求过多" 即指此形态,故 push2+断连也算限流。
+      "服务器断开了连接,通常是短时间内请求过多" 即指此形态,故 push2+断连也算限流;
+    - **requests 的 ConnectionError 常常把 URL 放在 e.request 上、message 里没有"push2"**
+      (2026-11-14 实测:59 页翻页触发断连后 message 只有 "Connection aborted",
+      旧判据漏判 → 冷却没被记录 → 次日继续猛打。故必须查 e.request.url)。
     """
     name = type(e).__name__
     msg = str(e)
     if "RateLimit" in name or "RateLimit" in msg:
+        return True
+    cls = type(e).__name__.lower()
+    req = getattr(e, "request", None)
+    url = (getattr(req, "url", "") or "").lower()
+    conn_like = any(k in cls for k in ("connection", "timeout", "protocol", "connect"))
+    if "push2" in url and (conn_like or "connection" in msg.lower() or "remote" in msg.lower()):
         return True
     low = msg.lower()
     return "push2" in low and ("connection" in low or "remotedisconnected" in low or "断开" in msg)
@@ -186,6 +195,93 @@ def compute_breadth(spot_df: dict) -> dict:
             "breadth_ratio": (ups / total) if total else None}
 
 
+# ---------------------------------------------------------------- 全市场快照(自建分页)
+
+SPOT_EM_URL = "https://82.push2.eastmoney.com/api/qt/clist/get"
+SPOT_EM_FS = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048"
+SPOT_EM_FIELDS = "f12,f14,f17,f15,f16,f2,f18,f5,f6,f3,f8"
+SPOT_EM_HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"),
+    "Referer": "https://quote.eastmoney.com/",
+}
+_SPOT_COLUMNS = {"f12": "代码", "f14": "名称", "f17": "今开", "f15": "最高",
+                 "f16": "最低", "f2": "最新价", "f18": "昨收", "f5": "成交量",
+                 "f6": "成交额", "f3": "涨跌幅", "f8": "换手率"}
+
+
+def _default_spot_requester(url: str, params: dict, timeout: float = 25.0) -> dict:
+    """真实网络请求(单测注入替身)。异常原样抛出,由 _spot_fetch_page 统一处理。"""
+    import requests  # noqa: PLC0415
+
+    resp = requests.get(url, params=params, headers=SPOT_EM_HEADERS, timeout=timeout)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _spot_fetch_page(requester, limiter, pn: int, pz: int,
+                     timeout: float, retries: int) -> dict:
+    """取一页;断连判定为限流(不硬刚),其它异常见有限重试。"""
+    params = {"pn": pn, "pz": pz, "po": 1, "np": 1,
+              "ut": "bd1d9ddb04089700cf9c27f6f7426281", "fltt": 2, "invt": 2,
+              "fid": "f3", "fs": SPOT_EM_FS, "fields": SPOT_EM_FIELDS}
+    limiter.check_blocked()
+    limiter.wait()
+    last = None
+    for attempt in range(retries + 1):
+        try:
+            payload = requester(SPOT_EM_URL, params, timeout=timeout)
+            data = payload.get("data") if isinstance(payload, dict) else None
+            if not isinstance(data, dict):
+                raise ValueError(f"东财快照返回异常: {str(payload)[:120]}")
+            return data
+        except Exception as e:  # noqa: BLE001
+            if is_rate_limit_error(e):
+                limiter.trigger_backoff()
+                raise RateLimitTriggered(f"东财 push2 断连,判定限流并退避: {e}") from e
+            last = e
+            if attempt < retries:
+                time.sleep(min(2 ** (attempt + 1), 8))
+    raise last
+
+
+def _diff_to_spot_df(rows: list[dict]):
+    """东财 diff 列表 → 与 akshare 同名的中文列 DataFrame(normalize_spot 直接复用)。"""
+    import pandas as pd  # noqa: PLC0415
+
+    records = [{_SPOT_COLUMNS[k]: item.get(k) for k in _SPOT_COLUMNS} for item in rows]
+    return pd.DataFrame.from_records(records)
+
+
+def fetch_spot_em(limiter=None, requester=None, page_size: int = 100,
+                  first_page_size: int = 6000, retries: int = 1,
+                  timeout: float = 25.0):
+    """全市场快照(自建,替代 akshare 的 59 页无间隔翻页)。
+
+    两段策略:
+    1. 先试一页拉满(first_page_size)——成功则整日只发 1 个请求,最不容易触发限流;
+    2. 东财若截断到 page_size,再按页补齐(每页之间走 limiter,不裸奔)。
+    """
+    limiter = limiter or RateLimiter(min_interval=1.0)
+    requester = requester or _default_spot_requester
+
+    data = _spot_fetch_page(requester, limiter, 1, first_page_size, timeout, retries)
+    total = int(data.get("total") or 0)
+    diff = list(data.get("diff") or [])
+
+    rows = list(diff)
+    pn = 2
+    while total and len(rows) < total and diff:
+        data = _spot_fetch_page(requester, limiter, pn, page_size, timeout, retries)
+        diff = list(data.get("diff") or [])
+        rows.extend(diff)
+        pn += 1
+
+    if not rows:
+        raise ValueError("东财快照为空(可能被限流或休市)")
+    return _diff_to_spot_df(rows)
+
+
 # ---------------------------------------------------------------- 采集命令
 
 def collect_daily(cfg: dict, conn, day: date | None = None, fetcher=None, limiter=None) -> dict:
@@ -194,17 +290,28 @@ def collect_daily(cfg: dict, conn, day: date | None = None, fetcher=None, limite
     spot 接口是实时快照,只对"今天"有意义;day 非None时必须是今天。
     """
     day = day or date.today()
+
+    # 非交易日不落快照:spot 是实时快照,周末/假日取到的是上一交易日数据,
+    # 若照常按"今天"归档会把陈数据伪装成新数据(2026-11-14 实测周六场景)。
+    cache = (cfg.get("collect") or {}).get("calendar_cache")
+    if cache:
+        from .calendar import load_calendar_cache  # noqa: PLC0415
+
+        days = load_calendar_cache(cache)
+        if days and day not in days:
+            log_event(conn, "WARN", "collect_daily", f"{day} 非交易日,跳过快照")
+            return {"status": "non_trading_day", "day": day.isoformat()}
+
     params = {"day": day.isoformat()}
     tkey = task_key("akshare", "spot_snapshot", params)
     seen = has_task(conn, tkey)
     if seen is not None:
         return {"status": "skipped", "task_key": tkey, "rows": seen["rows"]}
 
-    if fetcher is None:
-        import akshare as ak  # noqa: PLC0415
-
-        fetcher = ak.stock_zh_a_spot_em
     limiter = limiter or _limiter_from_cfg(cfg)
+    if fetcher is None:
+        # 默认走自建快照:优先单请求拉满,失败按页补齐(akshare 的 59 页无间隔翻页会触发断连)
+        fetcher = lambda: fetch_spot_em(limiter=limiter)  # noqa: E731
     raw_df = guarded_call(limiter, fetcher)
     norm = normalize_spot(raw_df)
     norm = norm[norm["code"].notna()]

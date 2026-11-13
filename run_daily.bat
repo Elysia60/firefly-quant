@@ -1,11 +1,34 @@
 @echo off
 rem astock-monitor daily run (ASCII only - GBK lesson from csqaq-monitor lesson #3)
+rem 2026-11-14: log every step and propagate the exit code.
+rem Reason: Task Scheduler reported Last Result 0 on 2026-11-13 while collection
+rem silently failed (no parquet, no log) - a green light on a broken pipeline.
+setlocal
 set PYTHONUTF8=1
 cd /d %~dp0
-echo [1/3] doctor self-check ...
-python -m astock_monitor.cli doctor
-echo [2/3] daily snapshot collect ...
-python -m astock_monitor.cli collect-daily
-echo [3/3] sentiment collect (zt pool + margin) ...
-python -m astock_monitor.cli collect-sentiment
-echo done.
+if not exist logs mkdir logs
+for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set STAMP=%%i
+if "%STAMP%"=="" set STAMP=manual
+set LOG=logs\daily-%STAMP%.log
+
+echo [%DATE% %TIME%] START >> "%LOG%"
+call :step doctor >> "%LOG%" 2>&1
+if errorlevel 1 goto fail
+call :step collect-daily >> "%LOG%" 2>&1
+if errorlevel 1 goto fail
+call :step collect-sentiment >> "%LOG%" 2>&1
+if errorlevel 1 goto fail
+echo [%DATE% %TIME%] DONE rc=0 >> "%LOG%"
+exit /b 0
+
+:fail
+set RC=%errorlevel%
+echo [%DATE% %TIME%] FAILED rc=%RC% >> "%LOG%"
+if not defined CI echo Log: %LOG%
+exit /b %RC%
+
+:step
+echo.
+echo ==== %~1 ====
+python -m astock_monitor.cli %~1
+exit /b %errorlevel%

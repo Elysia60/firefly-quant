@@ -159,6 +159,21 @@ class CollectDailyTest(unittest.TestCase):
         self.assertTrue((Path(self.cfg["paths"]["lake_raw"]) / "akshare" / "spot"
                          / "dt=20261112" / "part.parquet").exists())
 
+    def test_non_trading_day_skips_without_request(self):
+        from astock_monitor.calendar import cache_to_json
+
+        cache_to_json([date(2026, 11, 12)], self.cfg["collect"]["calendar_cache"])
+        calls = []
+
+        def fetcher():
+            calls.append(1)
+            return _fake_spot_df()
+
+        r = collect.collect_daily(self.cfg, self.conn, day=date(2026, 11, 14),
+                                   fetcher=fetcher, limiter=self._limiter())
+        self.assertEqual(r["status"], "non_trading_day")
+        self.assertEqual(calls, [])
+
     def test_fetch_hist_sina_fallback(self):
         import pandas as pd
 
@@ -199,6 +214,74 @@ class NormalizeTest(unittest.TestCase):
                                      {"pct_chg": 0.0}, {"pct_chg": None}])
         self.assertEqual((b["up"], b["down"], b["flat"]), (1, 1, 1))
         self.assertAlmostEqual(b["breadth_ratio"], 0.5)
+
+
+class SpotFetchTest(unittest.TestCase):
+    """自建快照采集:单页快路 / 翻页补齐 / 断连判定为限流。零联网(requester 注入)。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.limiter = FakeLimiter(min_interval=0.0,
+                                   state_path=Path(self.tmp.name) / "c.json")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_single_page_fast_path(self):
+        calls = []
+
+        def requester(url, params, timeout=25.0):
+            calls.append((params["pn"], params["pz"]))
+            return {"data": {"total": 1, "diff": [{"f12": "600519", "f14": "贵州茅台"}]}}
+
+        df = collect.fetch_spot_em(limiter=self.limiter, requester=requester)
+        self.assertEqual(len(df), 1)
+        self.assertIn("代码", df.columns)
+        self.assertEqual(calls, [(1, 6000)])  # 整日只发 1 个请求
+
+    def test_falls_back_to_paging(self):
+        pages = {
+            1: {"total": 5, "diff": [{"f12": "a"}, {"f12": "b"}]},
+            2: {"total": 5, "diff": [{"f12": "c"}, {"f12": "d"}]},
+            3: {"total": 5, "diff": [{"f12": "e"}]},
+        }
+
+        def requester(url, params, timeout=25.0):
+            return {"data": pages[params["pn"]]}
+
+        df = collect.fetch_spot_em(limiter=self.limiter, requester=requester)
+        self.assertEqual(len(df), 5)
+
+    def test_connection_error_becomes_rate_limit(self):
+        import requests
+
+        req = requests.Request("GET", "https://82.push2.eastmoney.com/api/qt/clist/get").prepare()
+        err = requests.exceptions.ConnectionError("Connection aborted (RemoteDisconnected)")
+        err.request = req
+
+        def requester(url, params, timeout=25.0):
+            raise err
+
+        with self.assertRaises(collect.RateLimitTriggered):
+            collect.fetch_spot_em(limiter=self.limiter, requester=requester)
+        self.assertIsNotNone(self.limiter.blocked_until())  # 冷却已记录,次日不会接着猛打
+
+    def test_is_rate_limit_error_reads_request_url(self):
+        import requests
+
+        req = requests.Request("GET", "https://push2.eastmoney.com/api/qt/clist/get").prepare()
+        err = requests.exceptions.ConnectionError("Connection aborted")
+        err.request = req  # message 里没有 push2,靠 request.url 识别
+        self.assertTrue(collect.is_rate_limit_error(err))
+
+    def test_http_error_is_not_rate_limit(self):
+        """4xx/5xx 是接口错误,不是限流——否则会被误判成退避、整日无数据。"""
+        import requests
+
+        req = requests.Request("GET", "https://push2.eastmoney.com/api/qt/clist/get").prepare()
+        err = requests.exceptions.HTTPError("400 Client Error")
+        err.request = req
+        self.assertFalse(collect.is_rate_limit_error(err))
 
 
 if __name__ == "__main__":
