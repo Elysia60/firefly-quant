@@ -77,6 +77,8 @@ def main(argv: list[str] | None = None) -> int:
     p_sig = sub.add_parser("signal", help="生成指数信号(防泄漏:只用截至昨日)")
     p_sig.add_argument("--date", default=None, help="信号日 YYYY-MM-DD,默认今天")
     p_sig.add_argument("--index", default="000300.SH", help="指数符号,默认沪深300")
+    p_sig.add_argument("--require-session", action="store_true",
+                       help="自动化守卫:信号日非交易日则跳过(防周末信号污染 forecast_log)")
 
     sub.add_parser("forecast-judge", help="判卷到期信号(T+5/T+20,真实数据,不提前猜)")
 
@@ -85,7 +87,9 @@ def main(argv: list[str] | None = None) -> int:
     p_rp.add_argument("--end", required=True)
     p_rp.add_argument("--index", default="000300.SH")
 
-    sub.add_parser("forecast-summary", help="对账记分牌汇总")
+    p_sum = sub.add_parser("forecast-summary", help="对账记分牌汇总")
+    p_sum.add_argument("--out", default=None,
+                       help="同时把汇总 JSON 落到该路径(自动化快照用)")
 
     args = parser.parse_args(argv)
     cfg = load_config(args.config)
@@ -175,6 +179,17 @@ def main(argv: list[str] | None = None) -> int:
             if args.cmd == "signal":
                 rows = load_index_closes(lake, args.index)
                 day = date.fromisoformat(args.date) if args.date else date.today()
+                if getattr(args, "require_session", False):
+                    session_days = astock_cal.load_calendar_cache(
+                        resolve_path(cfg, "collect.calendar_cache"))
+                    if session_days is None:
+                        session_days = astock_cal.read_cnequity_calendar(lake)
+                    if not astock_cal.is_session_day(day, session_days):
+                        import json as _json
+                        print(_json.dumps({"skipped": True, "date": day.isoformat(),
+                                           "reason": "非交易日(守卫拒绝,不落 forecast_log)"},
+                                          ensure_ascii=False))
+                        return 0
                 sig = generate_signal(rows, day)
                 n = F.record_signal(conn, sig)
                 import json as _json
@@ -184,7 +199,14 @@ def main(argv: list[str] | None = None) -> int:
             if args.cmd == "forecast-summary":
                 import json as _json
                 cost = float(cfg["backtest"].get("cost_round_trip", 0.002))
-                print(_json.dumps(F.summarize(conn, cost_rt=cost), ensure_ascii=False, indent=2))
+                summary = _json.dumps(F.summarize(conn, cost_rt=cost), ensure_ascii=False, indent=2)
+                print(summary)
+                if getattr(args, "out", None):
+                    from pathlib import Path as _Path
+                    out_p = _Path(args.out)
+                    out_p.parent.mkdir(parents=True, exist_ok=True)
+                    out_p.write_text(summary + "\n", encoding="utf-8")
+                    print(f"落盘 {out_p}")
                 return 0
             index = getattr(args, "index", "000300.SH")
             rows = load_index_closes(lake, index)

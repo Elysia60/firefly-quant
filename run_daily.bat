@@ -20,6 +20,15 @@ call :step collect-daily >> "%LOG%" 2>&1
 if errorlevel 1 goto fail
 call :step collect-sentiment >> "%LOG%" 2>&1
 if errorlevel 1 goto fail
+rem 2026-11-14: close the daily loop - signal (session-day gated) -> judge -> scoreboard -> dashboard
+call :step signal --require-session >> "%LOG%" 2>&1
+if errorlevel 1 goto fail
+call :step forecast-judge >> "%LOG%" 2>&1
+if errorlevel 1 goto fail
+call :step forecast-summary --out data\state\scoreboard_daily.json >> "%LOG%" 2>&1
+if errorlevel 1 goto fail
+call :py scripts\build_dashboard.py >> "%LOG%" 2>&1
+if errorlevel 1 goto fail
 echo [%DATE% %TIME%] DONE rc=0 >> "%LOG%"
 exit /b 0
 
@@ -29,8 +38,14 @@ echo [%DATE% %TIME%] FAILED rc=%RC% >> "%LOG%"
 if not defined CI echo Log: %LOG%
 exit /b %RC%
 
+:py
+echo.
+echo ==== py %~1 ====
+python %~1
+exit /b %errorlevel%
+
 :step
 echo.
-echo ==== %~1 ====
-python -m astock_monitor.cli %~1
+echo ==== %* ====
+python -m astock_monitor.cli %*
 exit /b %errorlevel%

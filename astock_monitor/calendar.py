@@ -85,6 +85,12 @@ def trading_days(days: list[date], start: date | None = None, end: date | None =
     return out
 
 
+def is_session_day(d: date, days: list[date]) -> bool:
+    """d 是否为交易日(P4 自动化守卫:周末/节假日不出信号,防 forecast_log 语义污染)。
+    依赖日历覆盖度:d 不在覆盖范围内时返回 False——宁可少出一天信号,不造伪信号。"""
+    return d in frozenset(days)
+
+
 def next_trading_day(d: date, days: list[date]) -> date:
     """严格晚于 d 的第一个交易日;越界抛 ValueError(fail loud,不静默回绕)。"""
     idx = bisect_right(days, d)

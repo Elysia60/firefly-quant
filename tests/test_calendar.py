@@ -102,5 +102,28 @@ class SyntheticLakeTest(unittest.TestCase):
             self.assertEqual(days, [date(2026, 9, 30), date(2026, 10, 8)])
 
 
+class SessionDayTest(unittest.TestCase):
+    """is_session_day: P4 信号守卫(周末/节假日拒绝, 覆盖外也拒绝——宁可少出不造伪)."""
+
+    def test_member_day_true(self):
+        days = [date(2026, 11, 12), date(2026, 11, 13), date(2026, 11, 16)]
+        self.assertTrue(cal.is_session_day(date(2026, 11, 13), days))
+
+    def test_weekend_false(self):
+        days = [date(2026, 11, 12), date(2026, 11, 13), date(2026, 11, 16)]
+        self.assertFalse(cal.is_session_day(date(2026, 11, 14), days))  # 周六
+        self.assertFalse(cal.is_session_day(date(2026, 11, 15), days))  # 周日
+
+    def test_outside_coverage_false(self):
+        """日历覆盖不到的日期一律 False(fail-closed): 宁可跳过一天信号."""
+        days = [date(2026, 11, 12), date(2026, 11, 13)]
+        self.assertFalse(cal.is_session_day(date(2026, 11, 16), days))
+
+    def test_holiday_false(self):
+        days = [date(2026, 9, 30), date(2026, 10, 8)]  # 国庆 10-01~07 缺席
+        self.assertFalse(cal.is_session_day(date(2026, 10, 1), days))
+        self.assertTrue(cal.is_session_day(date(2026, 10, 8), days))
+
+
 if __name__ == "__main__":
     unittest.main()
