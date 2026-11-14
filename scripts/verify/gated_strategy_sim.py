@@ -99,11 +99,14 @@ def target_pos(day: date, mode: str) -> float:
     return 0.0 if flat_next(day, 'C' if mode == 'H' else 'E') else 1.0
 
 
+SIM_START = date(2015, 1, 5)
+
+
 def simulate(mode: str) -> dict:
     nav, peak, mdd = 1.0, 1.0, 0.0
     rets, switches, flat_days = [], 0, 0
     pos_prev = 1.0
-    start = min(d for d in closes if d >= date(2015, 1, 5))
+    start = min(d for d in closes if d >= SIM_START)
     for i, d in enumerate(days):
         if d < start or d not in closes:
             continue
@@ -133,9 +136,16 @@ def simulate(mode: str) -> dict:
 
 
 import math  # noqa: E402
+import os as _os
 
-out = {"cost_side": COST_SIDE, "start": "2015-01-05", "index": "000300.SH",
-       "results": [simulate(m) for m in ("A", "B", "C", "D", "E", "F", "H", "I")]}
+_modes_env = _os.environ.get("SIM_MODES", "A,B,C,D,E,F,H,I")
+_start_env = _os.environ.get("SIM_START")
+if _start_env:
+    _y, _m, _dd = (int(x) for x in _start_env.split("-"))
+    SIM_START = date(_y, _m, _dd)
+
+out = {"cost_side": COST_SIDE, "start": str(SIM_START), "index": "000300.SH",
+       "results": [simulate(m) for m in _modes_env.split(",")]}
 out_path = REPO_ROOT / "results" / "gated_strategy_sim.json"
 out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
 print(json.dumps(out, ensure_ascii=False, indent=2))

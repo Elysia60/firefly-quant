@@ -1,87 +1,37 @@
 {
   "cost_side": 0.001,
-  "start": "2015-01-05",
+  "start": "2022-07-01",
   "index": "000300.SH",
   "results": [
     {
       "mode": "A",
-      "nav": 1.1444,
-      "ann_ret": 0.0114,
-      "sharpe": 0.16,
-      "max_dd": -0.467,
+      "nav": 0.9017,
+      "ann_ret": -0.0235,
+      "sharpe": -0.053,
+      "max_dd": -0.2973,
       "switches": 0,
       "flat_days": 0,
-      "days": 2881
-    },
-    {
-      "mode": "B",
-      "nav": 0.132,
-      "ann_ret": -0.157,
-      "sharpe": -0.262,
-      "max_dd": -0.872,
-      "switches": 744,
-      "flat_days": 1436,
-      "days": 2881
-    },
-    {
-      "mode": "C",
-      "nav": 0.1656,
-      "ann_ret": -0.1407,
-      "sharpe": -0.217,
-      "max_dd": -0.8409,
-      "switches": 652,
-      "flat_days": 1248,
-      "days": 2881
-    },
-    {
-      "mode": "D",
-      "nav": 0.9047,
-      "ann_ret": -0.0084,
-      "sharpe": 0.141,
-      "max_dd": -0.467,
-      "switches": 96,
-      "flat_days": 188,
-      "days": 2881
+      "days": 1059
     },
     {
       "mode": "E",
-      "nav": 0.5685,
-      "ann_ret": -0.0465,
-      "sharpe": -0.135,
-      "max_dd": -0.5676,
-      "switches": 56,
-      "flat_days": 594,
-      "days": 2881
+      "nav": 0.8852,
+      "ann_ret": -0.0276,
+      "sharpe": -0.049,
+      "max_dd": -0.3161,
+      "switches": 16,
+      "flat_days": 76,
+      "days": 1059
     },
     {
       "mode": "F",
-      "nav": 1.2689,
-      "ann_ret": 0.0203,
-      "sharpe": 0.217,
-      "max_dd": -0.467,
-      "switches": 17,
-      "flat_days": 586,
-      "days": 2881
-    },
-    {
-      "mode": "H",
-      "nav": 0.4512,
-      "ann_ret": -0.0649,
-      "sharpe": 0.008,
-      "max_dd": -0.6813,
-      "switches": 652,
-      "flat_days": 0,
-      "days": 2881
-    },
-    {
-      "mode": "I",
-      "nav": 0.8245,
-      "ann_ret": -0.0161,
-      "sharpe": 0.029,
-      "max_dd": -0.482,
-      "switches": 56,
-      "flat_days": 0,
-      "days": 2881
+      "nav": 0.9638,
+      "ann_ret": -0.0084,
+      "sharpe": 0.024,
+      "max_dd": -0.2616,
+      "switches": 9,
+      "flat_days": 402,
+      "days": 1059
     }
   ]
 }
