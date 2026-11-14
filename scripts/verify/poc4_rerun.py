@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """PoC-4 独立复跑背书(萤火计划动工第 0 步)。
 
-与 WorkBuddy 沙箱 astock_poc/poc4_calendar_alignment.py 同源(只读留证,不改沙箱):
+与 本地沙箱 沙箱 astock_poc/poc4_calendar_alignment.py 同源(只读留证,不改沙箱):
 - 探针判据 = orders_df 实际成交时间戳(撮合级),非 bar 时间戳
 - 不预设 2026-10-08 是假日,让 CNEquity 与新浪两源对拍说话
 差异:输出落本仓库 results/;湖路径读生产仓 config.json(单一正本)。
 
-运行环境:需 akquant(WorkBuddy venv):
-  "C:/Users/14676/.workbuddy/binaries/python/envs/default/Scripts/python.exe" scripts/verify/poc4_rerun.py
+运行环境:需 akquant(本地沙箱 venv):
+  "<本机>/.workbuddy/binaries/python/envs/default/Scripts/python.exe" scripts/verify/poc4_rerun.py
 """
 import json
 import sys

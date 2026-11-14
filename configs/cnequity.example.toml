@@ -1,0 +1,5 @@
+# CNEquity 湖配置样例——复制为 configs/cnequity.toml 后按需修改
+extends = "builtin"
+
+[data]
+root = "./data/cnequity-lake"

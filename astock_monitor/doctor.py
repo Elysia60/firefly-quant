@@ -137,7 +137,7 @@ def check_deps() -> dict:
         importlib.import_module("akquant")
         detail.append("akquant=ok")
     except Exception:  # noqa: BLE001
-        detail.append("akquant=缺失(回测冒烟需 WorkBuddy venv)")
+        detail.append("akquant=缺失(回测冒烟需 本地沙箱 venv)")
     if missing:
         return {"name": "deps", "status": "WARN", "detail": "缺少: " + ",".join(missing) + "; " + "; ".join(detail)}
     return {"name": "deps", "status": "PASS", "detail": "; ".join(detail)}

@@ -13,3 +13,9 @@ logs/
 # 系统杂项
 Thumbs.db
 desktop.ini
+
+# 发布净化:本机私有路径/并行会话交接单/备份快照不入库
+backups/
+configs/cnequity.toml
+docs/pending-verify-*.md
+results/*.old

@@ -5,7 +5,7 @@
 新浪 stock_zh_a_daily 为不复权日_price;湖 daily_bars 默认含复权因子,
 此处只取 close 与新浪 close 比对;若湖为后复权口径则改比比率(见输出标注)。
 
-用法: WorkBuddy venv python(需 cnequity 包读湖)或系统 python+pyarrow 直接读 parquet。
+用法: 本地沙箱 venv python(需 cnequity 包读湖)或系统 python+pyarrow 直接读 parquet。
 """
 import sys
 from pathlib import Path

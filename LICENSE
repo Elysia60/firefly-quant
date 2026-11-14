@@ -1,0 +1,35 @@
+# 萤火 Firefly · 许可证(CC BY-NC-SA 4.0)
+
+**Copyright (c) 2026 萤火 Firefly 项目作者(Elysia60)**
+
+本作品以 **CC BY-NC-SA 4.0(署名-非商业性使用-相同方式共享 4.0 国际)** 许可发布。
+
+完整法律文本:https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.zh
+简明摘要:https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh
+
+## 你可以
+
+- **署名使用**:复制、分发、展示与演绎本作品及其代码——前提是**显著注明出处**
+  ("来源:萤火 Firefly · github.com/Elysia60/firefly-quant"),并附本许可证链接。
+- **学习与修改**:研究、改造、以相同许可(share-alike)二次发布。
+
+## 你不可以
+
+- **商业性使用**:未经作者书面许可,不得将其用于任何商业目的(含收费服务、
+  商业产品内嵌、以本作品为主要卖点的收费咨询)。
+- **抄袭冒认**:删除、遮挡或替换本作品中的出处标记(PROJECT_BOOK.md /
+  METHODS.md / PROVENANCE.md / 代码文件头签名)后以自己名义发布,
+  即构成对 CC BY-NC-SA 署名条款的违反;将**结论注册表、反方陈述制度、
+  审计流水线**等原创设计表述为自己的原创设计,同样构成违反。
+- **关闭衍生品**:演绎作品必须以相同的 CC BY-NC-SA 4.0 分发。
+
+## 防伪与溯源
+
+- 本仓库的**官方出处**只有一处:github.com/Elysia60/firefly-quant
+- 每个发布版本带 **git tag**(如 v0.2.0)与 **PROVENANCE.md**(全文件 SHA256 清单)
+- 发现无署名转载 / 冒名发布 / 篡改注册表数字的副本,请向仓库提 issue 举报
+
+## 免责声明
+
+本项目为量化**研究**系统,不构成任何投资建议;所有注册结论(含负面结论)
+仅供方法学参考,使用者据此交易产生的盈亏与作者无关。

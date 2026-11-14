@@ -3,7 +3,7 @@
 > 本文档是项目的方法论正本:**结论数字只在这里定义一次**,其余文档为快照+回指(数字正本规则,继承 csqaq-monitor)。
 > 项目定位:A 股风险监控与研究基座,**不是盈利策略引擎**;不承诺 alpha,结论必须可对账。
 
-## 0. 选型定案(第 1 周 PoC 闭环,证据见 WorkBuddy 沙箱 POC_REPORT.md)
+## 0. 选型定案(第 1 周 PoC 闭环,证据见 本地沙箱 沙箱 POC_REPORT.md)
 
 | 层 | 定案 | 依据 |
 |---|---|---|
@@ -114,5 +114,5 @@ python -m astock_monitor.cli calendar-check      # 日历:湖读取+新浪对拍
 python -m astock_monitor.cli collect-daily       # 日更:按日期全市场快照(1 请求)
 python -m astock_monitor.cli backfill --universe hs800 --start 2024-01-01 --end 2025-01-01
 python -m astock_monitor.cli limits-check --code 600519 --prev-close 10.45 --price 11.50 --side buy
-python scripts/verify/poc4_rerun.py              # PoC-4 独立复跑背书(需 WorkBuddy venv)
+python scripts/verify/poc4_rerun.py              # PoC-4 独立复跑背书(需 本地沙箱 venv)
 ```

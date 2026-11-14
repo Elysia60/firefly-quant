@@ -14,4 +14,4 @@
 | R8(合并入 R3) | 日历效应 + TSFM 判决 | [S3] + 波动率实验观察清单 |
 | R9(合并入 R2) | Meta-labeling + HAR + 融合 | P8 V0→V1→V2 |
 
-原始证据:WorkBuddy 沙箱(只读)github_recon/(repos.jsonl 275 行、verified.json 14 仓)+ astock_poc/POC_REPORT.md
+原始证据:本地沙箱 沙箱(只读)github_recon/(repos.jsonl 275 行、verified.json 14 仓)+ astock_poc/POC_REPORT.md

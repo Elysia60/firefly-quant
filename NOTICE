@@ -1,0 +1,20 @@
+萤火 Firefly · A 股对账式量化研究系统
+Copyright (c) 2026 萤火 Firefly 项目作者(Elysia60)
+
+本产品基于 CC BY-NC-SA 4.0 许可(详见 LICENSE)。
+任何分发(含修改版)必须:①保留本 NOTICE 与 LICENSE;
+②显著注明"来源:萤火 Firefly · github.com/Elysia60/firefly-quant"。
+
+原创性声明(防抄袭基准):
+以下设计为本项目原创,他人在无署名的情况下宣称拥有,即违反许可证:
+  · 结论注册表制度(含反方陈述/推翻观测强制制)
+  · 对账记分牌(信号落盘→到期自动判卷→n_eff 重叠修正)
+  · 七项统计审计的标准库自研实现(DSR/块自助法/CUSUM+FPAR 校准/事件研究置换)
+  · regime 三票二门控(年线滞回 1.01/0.96 + 年线宽度 + 波动否决)
+  · 数据层四项硬要求(限速/指数退避/冷却持久化/新浪退市回退)
+  · 防泄漏三件套(决策只用截至昨日/缺口不前向填充/质量标注不静默修正)
+
+第三方组件归属:
+  · Microsoft Qlib — Alpha158 因子定义参考(MIT)
+  · akshare / CNEquity / AKQuant / LightGBM — 依各自开源许可使用
+  · Politis-Romano stationary bootstrap / Newey-West HAC / Bailey & López de Prado DSR — 学术方法,公式实现为本项目原创

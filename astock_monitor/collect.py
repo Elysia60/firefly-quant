@@ -459,7 +459,7 @@ def backfill_cnequity(cfg: dict, universe_codes: list[str], start: str, end: str
             result["stderr_tail"] = proc.stderr[-800:]
         except FileNotFoundError:
             result["status"] = "cne_not_found"
-            result["hint"] = "宿主机无 cne 命令;用 WorkBuddy venv 的 Scripts/cne.exe 或把 venv/Scripts 加入 PATH"
+            result["hint"] = "宿主机无 cne 命令;用 本地沙箱 venv 的 Scripts/cne.exe 或把 venv/Scripts 加入 PATH"
         except subprocess.TimeoutExpired:
             result["status"] = "timeout"
     return result
