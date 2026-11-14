@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# 数据层全部本地化(data/lake 由 akshare 可独立重建,不入库)
+data/
+
+# 每日运行日志(run_daily.bat 产出,机器本地留痕)
+logs/
+
+# 系统杂项
+Thumbs.db
+desktop.ini
+
+# 发布净化:本机私有路径/并行会话交接单/备份快照不入库
+backups/
+configs/cnequity.toml
+docs/pending-verify-*.md
+results/*.old

@@ -1,0 +1,49 @@
+{
+  "A": {
+    "rows": 1908,
+    "trading_days": 1908,
+    "range": [
+      "2020-01-02",
+      "2027-11-12"
+    ],
+    "type": "date"
+  },
+  "A2_sina_crosscheck": {
+    "status": "compared",
+    "window": [
+      "2020-01-02",
+      "2026-12-31"
+    ],
+    "count_a": 1697,
+    "count_b": 1697,
+    "only_in_a": [],
+    "only_in_b": [],
+    "identical": true
+  },
+  "B": {
+    "uses_fallback_calendar": true,
+    "is_session_day_2026_10_01(Thu,holiday)": true,
+    "is_session_day_2026_10_03(Sat)": false
+  },
+  "C_fill_level": {
+    "fills_without_calendar": [
+      "2026-09-30",
+      "2026-10-01"
+    ],
+    "fills_with_cne_calendar": [
+      "2026-09-30",
+      "2026-10-08"
+    ],
+    "leak_without_calendar": [
+      "2026-10-01"
+    ],
+    "leak_with_calendar": []
+  },
+  "VERDICT": {
+    "cnequity_calendar_readable_as_list_date": true,
+    "cnequity_vs_sina_identical": true,
+    "akquant_default_treats_holiday_thu_as_session": true,
+    "akquant_fills_on_holiday_without_calendar": true,
+    "akquant_no_holiday_fill_with_cne_calendar": true
+  }
+}
