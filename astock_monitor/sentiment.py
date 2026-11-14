@@ -93,6 +93,29 @@ def compute_breadth_history(bars_df, ma_windows: tuple[int, ...] = (20, 60)) -> 
     return daily
 
 
+def collect_erp(cfg: dict, conn, fetcher=None, limiter=None) -> dict:
+    """股债利差 ERP(乐咕,2005-04 起)——单次全量回补,此后幂等跳过。
+
+    风暴触发面板的慢变量:ERP 极低(股贵债便宜)= 风险积累;极高 = 布局区。
+    """
+    params = {"dataset": "erp_ebs"}
+    tkey = task_key("akshare", "erp", params)
+    if has_task(conn, tkey) is not None:
+        return {"status": "skipped", "task_key": tkey}
+    if fetcher is None:
+        import akshare as ak  # noqa: PLC0415
+        fetcher = ak.stock_ebs_lg
+    limiter = limiter or _limiter(cfg)
+    raw = guarded_call(limiter, fetcher)
+    if raw is None or len(raw) == 0:
+        raise ValueError("ERP 接口返回空")
+    raw_dir = resolve_path(cfg, "paths.lake_raw") / "akshare" / "erp"
+    path = write_parquet_atomic(raw, raw_dir / "part.parquet")
+    record_task(conn, tkey, "akshare", "erp", params, len(raw), None, None, str(path))
+    log_event(conn, "INFO", "collect_erp", f"rows={len(raw)}")
+    return {"status": "ok", "rows": len(raw), "path": str(path)}
+
+
 def load_margin_greed(lake_raw: Path, rank_window: int = 500) -> dict:
     """两融余额 → 贪婪度 0-100(滚动分位;杠杆升高=贪婪=危险,csqaq 反向锚点口径)。
 
@@ -111,7 +134,7 @@ def load_margin_greed(lake_raw: Path, rank_window: int = 500) -> dict:
     df.columns = ["date", "balance"]
     df["date"] = pd.to_datetime(df["date"]).dt.date
     df = df.drop_duplicates("date").sort_values("date").reset_index(drop=True)
-    df["greed"] = (df["balance"].rolling(rank_window).rank(pct=True) * 100).shift(1)
+    df["greed"] = df["balance"].rolling(rank_window).rank(pct=True).shift(1)  # 0-1,与 vol_pct/erp_pct 同刻度
     # shift(1):分位池不含当日——T 日贪婪度只反映 ≤T-1(与 regime.vol_pct 同纪律)
     return {d: float(v) for d, v in zip(df["date"], df["greed"]) if pd.notna(v)}
 

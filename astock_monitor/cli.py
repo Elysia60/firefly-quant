@@ -68,6 +68,8 @@ def main(argv: list[str] | None = None) -> int:
     p_sent = sub.add_parser("collect-sentiment", help="情绪数据:涨停池(每日必采,仅留~3周)+两融全量回补")
     p_sent.add_argument("--date", default=None, help="YYYY-MM-DD,默认今天")
 
+    sub.add_parser("triggers", help="2027 watch 触发面板(跨越才推送,不 front-run)")
+
     p_aud = sub.add_parser("audit-signal", help="结论审计:NW t + bootstrap CI + 事件研究对照(随机化推断)")
     p_aud.add_argument("--verdict", default="avoid_watch", choices=["avoid_watch", "buy_watch", "neutral"])
     p_aud.add_argument("--window", type=int, default=5, choices=[5, 20])
@@ -279,12 +281,14 @@ def main(argv: list[str] | None = None) -> int:
         from .sentiment import backfill_margin, collect_zt_pool
         conn = _db(cfg)
         try:
+            from .sentiment import collect_erp
             day = date.fromisoformat(args.date) if args.date else None
             r1 = collect_zt_pool(cfg, conn, day=day)
             r2 = backfill_margin(cfg, conn)
+            r3 = collect_erp(cfg, conn)
         finally:
             conn.close()
-        print({"zt_pool": r1, "margin": r2})
+        print({"zt_pool": r1, "margin": r2, "erp": r3})
         return 0
 
     if args.cmd == "audit-signal":
@@ -334,6 +338,46 @@ def main(argv: list[str] | None = None) -> int:
             "boot_ci": [round(lo, 5), round(hi, 5)],
             "event_study": {k: (round(v, 5) if isinstance(v, float) else v) for k, v in es.items()},
         }, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "triggers":
+        import json as _json
+        from . import triggers as TR
+        from .config import resolve_path as _rp
+        metrics_pack = TR.load_metric_series(cfg)
+        latest = {}
+        for name in ("erp_pct", "breadth", "greed", "vol_pct"):
+            ser = metrics_pack[name]
+            if ser:
+                latest[name] = ser[max(ser)]
+        idx_rows = metrics_pack["index_rows"]
+        reg = metrics_pack["regime"]
+        d_last = max(reg)
+        latest["regime"] = reg[d_last]["regime"]
+        state_f = _rp(cfg, "triggers.state_file")
+        prev = {}
+        if state_f.exists():
+            try:
+                prev = _json.loads(state_f.read_text(encoding="utf-8"))
+            except ValueError:
+                prev = {}
+        result = TR.eval_triggers(latest, prev, cfg.get("triggers", {}))
+        state_f.write_text(_json.dumps(
+            {k: {"fired": v["fired"], "since": v["since"]} for k, v in result.items()},
+            ensure_ascii=False, indent=2), encoding="utf-8")
+        print(_json.dumps({"as_of": str(d_last), "triggers": result},
+                          ensure_ascii=False, indent=2))
+        new_fires = [k for k, v in result.items() if v["changed"]]
+        if new_fires:
+            now_s = date.today().isoformat()
+            lines = [f"[{now_s}] 2027 watch 触发(跨越): " + "、".join(new_fires)]
+            for k in new_fires:
+                lines.append(f"  {k}: 当前值 {result[k]['value']}")
+            lines.append("纪律:触发只记录并进入样本外审判流程,不构成交易指令(不 front-run)。")
+            # 推送出口:主动消息目录(与看门狗同通道;路径常量放在模块级,避免内联转义)
+            from .notify_proactive import push_lines
+            pf = push_lines(lines)
+            print(f"已推送触发告警: {pf} ({len(new_fires)} 项新跨越)")
         return 0
 
     if args.cmd == "verify-poc4":

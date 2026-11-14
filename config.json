@@ -19,18 +19,27 @@
   },
   "limits": {
     "board_pct": {
-      "main": 0.10,
-      "chinext": 0.20,
-      "chinext_before_2020_08_24": 0.10,
-      "star": 0.20,
-      "bse": 0.30,
+      "main": 0.1,
+      "chinext": 0.2,
+      "chinext_before_2020_08_24": 0.1,
+      "star": 0.2,
+      "bse": 0.3,
       "st_main": 0.05
     }
   },
   "backtest": {
     "broker_profile": "cn_stock_t1_low_fee",
     "comment": "AKQuant 试点;trading_calendar 必传(PoC-4 撮合级定案)",
-    "cost_round_trip": 0.0020,
+    "cost_round_trip": 0.002,
     "cost_comment": "回合成本=佣金万2.5×2+印花税0.05%卖出+过户费+滑点;记分牌扣成本口径(METHODS §1)"
+  },
+  "triggers": {
+    "erp_low_pct": 0.05,
+    "breadth_bear": 0.4,
+    "margin_greed_high": 0.9,
+    "vol_pct_high": 0.9,
+    "erp_window": 2500,
+    "state_file": "data/state/triggers_state.json",
+    "comment": "2027 watch 触发面板:跨越才推送,持续触发不重复;并行会话可对齐 T1-T7 语义"
   }
 }
