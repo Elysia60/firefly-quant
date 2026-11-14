@@ -15,7 +15,9 @@
 | 文件 | SHA256 |
 |---|---|
 | .gitignore | 52cd3b2667e0212abecdb0053eee90d7541ebb80381a1416e00a129ded594ead |
+| LICENSE | 67f197131d4f84bb2d89b7f164a5672a6c4d07488bc884a83541eeb4d550923c |
 | METHODS.md | 419f23df5501179e3d285f0e653b744940640a6745c0b09f8bd1b6b658fbe857 |
+| NOTICE | 57f64e39e6a87d47a44223ead6024bb061a00de459e90b1d18e990d066ff4c61 |
 | PROJECT_BOOK.md | b8f8740f42c6aa829192b9391589044638747f23f81b9acc8ad6f4c874741849 |
 | README.md | 8cdb619561fce0d2f0c4e11862f3196e5eab045f339becbe2179a5115f9fcff5 |
 | astock_monitor/__init__.py | 72419c274eaa378b26ac16c5283c669dfcbd73dee8bc5291c2a5cab12db07667 |
@@ -35,6 +37,7 @@
 | astock_monitor/signals.py | f655952f3c277ac2391eebb9de423d4a861a5ebab9d8c1bc2adb5ccb99857622 |
 | astock_monitor/store.py | 4d820fa2d244937188c8d92dcafc68b959da2f70cb792d1c6850929a4ee2fff9 |
 | config.json | 57a212072c9b4336229820b1336a38c27f5cb6edfa6b9190aea7e8baf40453b1 |
+| configs/cnequity.example.toml | b98a5b8a152162225a4dbb9e90a4606a5dad56ba18282afd3cc962b3cb432138 |
 | docs/optimization-roadmap.md | fa34810877e07fd8eb26de03e3c7bc94bec1ca109437d8a147521e89d29bbbbb |
 | docs/research/README.md | 99f932ac7644a86794dddc2191b2860e53a7f8a63b9792d5fc5b905ab24b05f6 |
 | docs/week3-report.md | 1da7fe5ad369e6dfc81402f5612351a88c2d2d52f6ad2ae5563442a816e07b84 |
@@ -47,6 +50,7 @@
 | results/regime_audit_verdict.json | c83a297d0aff6c5ac27577a476dd5afd630eeeccf5eeece551861b1d481f1c47 |
 | run_daily.bat | 3d69f0723ab232bf14fc1c2198e8bcfab15a715cf0f5ae0977f53abba52d677d |
 | scripts/build_dashboard.py | 41cadc99118c90c276d764ffcef8be59fd9ff0225c9c2d3fd9059cfed70f6431 |
+| scripts/provenance_check.py | c5a729c9fe1371f70108a08e7e2f6d724b4e042659c2182a772ee4d3c6ac560a |
 | scripts/verify/alpha_ic.py | bf89ebb8084375c58f95e738faa7f5460c0c4e332ee2a78545f5b0063348f924 |
 | scripts/verify/calendar_audit.py | 727d6c864d5c0dff5bda521d3e7a52fd91d39467aceac92244b02a166411ba7b |
 | scripts/verify/crosscheck_sina.py | 458ed822246aca368fea771c517896d06178037ea3834a4a11368ac794c9d009 |
