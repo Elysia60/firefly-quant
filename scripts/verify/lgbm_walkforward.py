@@ -97,7 +97,7 @@ if 10 in tb.columns and 1 in tb.columns:
 
 # 分年 Top Decile
 print("\n分年 Top Decile 收益:")
-oos["year"] = oos["date"].str[:4]
+oos["year"] = pd.to_datetime(oos["date"]).dt.year
 for y in sorted(oos["year"].unique()):
     sub = oos[(oos["year"] == y) & (oos["decile"] == 10)]["label_raw"]
     bot = oos[(oos["year"] == y) & (oos["decile"] == 1)]["label_raw"]
