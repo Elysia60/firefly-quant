@@ -21,8 +21,25 @@ from .store import has_task, log_event, record_task, task_key, write_parquet_ato
 
 def collect_zt_pool(cfg: dict, conn, day: date | None = None,
                     fetchers: dict | None = None, limiter=None) -> dict:
-    """涨停池 + 昨涨停表现,各 1 次请求(不可回补,幂等:当日已有即跳过)。"""
+    """涨停池 + 昨涨停表现,各 1 次请求(不可回补,幂等:当日已有即跳过)。
+
+    守卫(2026-11-17 修复错标 bug):非交易日不落池——push2ex 对非交易日/盘中
+    请求返回的是上一交易日池子,若按"今天"归档会把陈池伪装成新池
+    (2026-11-14/15 周末实测:三天分区全是 11-12 同一批 37 行)。
+    """
     day = day or date.today()
+
+    cache = (cfg.get("collect") or {}).get("calendar_cache")
+    if cache:
+        from .calendar import load_calendar_cache  # noqa: PLC0415
+
+        days = load_calendar_cache(cache)
+        if days and day not in days:
+            log_event(conn, "WARN", "collect_zt_pool",
+                      f"{day} 非交易日,跳过涨停池(陈池伪装防线)")
+            return {"status": "skipped", "reason": "non_trading_day",
+                    "day": day.isoformat(), "rows": 0}
+
     d8 = f"{day:%Y%m%d}"
     params = {"day": day.isoformat()}
     tkey = task_key("akshare", "zt_pool", params)

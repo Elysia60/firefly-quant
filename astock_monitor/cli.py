@@ -26,6 +26,31 @@ def _db(cfg: dict):
     return conn
 
 
+def _build_signal_maps(cfg: dict) -> tuple[dict | None, dict]:
+    """信号上下文 maps(与 forecast-replay 同源,单一实现)。
+
+    breadth_map = 湖 normalized/breadth_history(上涨家数占比);
+    sentiment_map = 两融贪婪度 ×100(csqaq v1.0 锚点契约)。
+    2026-11-17 修复两处:
+      ① signal 路径此前未接 maps,momentum/sentiment 腿静默缺失;
+      ② load_margin_greed 自 P3"量纲统一"起返回 0-1(服务 triggers 的 T-杠杆>0.9),
+         但 SENTIMENT_ANCHORS 是 0-100 → 0-1 全值域落在第一锚点段,
+         sentiment 腿被钉死 ~100(零区分度)。此处 ×100 恢复信号刻度,
+         triggers 的 0-1 契约不受影响。
+    """
+    breadth_map = None
+    bh = resolve_path(cfg, "paths.lake_norm") / "breadth_history" / "part.parquet"
+    if bh.exists():
+        import pandas as pd  # noqa: PLC0415
+        bdf = pd.read_parquet(bh)
+        breadth_map = {d: float(v) for d, v in
+                       zip(pd.to_datetime(bdf["date"]).dt.date, bdf["up_ratio"])}
+    from .sentiment import load_margin_greed
+    greed_map = load_margin_greed(resolve_path(cfg, "paths.lake_raw"))
+    greed_map = {d: v * 100.0 for d, v in greed_map.items()}
+    return breadth_map, greed_map
+
+
 def main(argv: list[str] | None = None) -> int:
     _utf8()
     parser = argparse.ArgumentParser(prog="astock_monitor", description="萤火计划 A 股量化监控系统")
@@ -192,7 +217,9 @@ def main(argv: list[str] | None = None) -> int:
                                            "reason": "非交易日(守卫拒绝,不落 forecast_log)"},
                                           ensure_ascii=False))
                         return 0
-                sig = generate_signal(rows, day)
+                breadth_map, greed_map = _build_signal_maps(cfg)
+                sig = generate_signal(rows, day, breadth_map=breadth_map,
+                                      sentiment_map=greed_map)
                 n = F.record_signal(conn, sig)
                 import json as _json
                 print(_json.dumps(sig.as_dict(), ensure_ascii=False, indent=2))
@@ -257,15 +284,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"本次判卷 {n} 条")
                 return 0
             if args.cmd == "forecast-replay":
-                breadth_map = None
-                bh = resolve_path(cfg, "paths.lake_norm") / "breadth_history" / "part.parquet"
-                if bh.exists():
-                    import pandas as pd  # noqa: PLC0415
-                    bdf = pd.read_parquet(bh)
-                    breadth_map = {d: float(v) for d, v in
-                                   zip(pd.to_datetime(bdf["date"]).dt.date, bdf["up_ratio"])}
-                from .sentiment import load_margin_greed
-                greed_map = load_margin_greed(resolve_path(cfg, "paths.lake_raw"))
+                breadth_map, greed_map = _build_signal_maps(cfg)
                 r = F.replay(conn, rows, days,
                              date.fromisoformat(args.start), date.fromisoformat(args.end),
                              breadth_map=breadth_map, sentiment_map=greed_map)
