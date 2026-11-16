@@ -43,10 +43,10 @@ def ic_feval(valid):
     return feval
 
 # ---- Walk-forward ----
-years = sorted(panel["date"].dt.year.unique())
+years = [int(y) for y in sorted(panel["date"].dt.year.unique())]
 oos_all = []
 print("\n== Walk-forward 训练 ==")
-for test_year in years[3:]:
+for test_year in [int(y) for y in years[3:]]:
     train = panel[panel["date"].dt.year < int(test_year)]
     test = panel[panel["date"].dt.year == int(test_year)]
     if len(train) < 100000 or len(test) < 5000:
@@ -109,7 +109,7 @@ for y in sorted(oos["year"].unique()):
 result = {
     "n_oos": len(oos),
     "features": FEAT,
-    "years": years[3:],
+    "years": [int(y) for y in years[3:]],
     "topk": {},
     "overall": {},
 }
