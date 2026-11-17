@@ -17,9 +17,9 @@
 | .gitignore | 52cd3b2667e0212abecdb0053eee90d7541ebb80381a1416e00a129ded594ead |
 | DSH_BRIEFING.md | 38bdc1048d5c746f2a39bf497974b580232470f687de98e35bf765aed6e54306 |
 | LICENSE | 67f197131d4f84bb2d89b7f164a5672a6c4d07488bc884a83541eeb4d550923c |
-| METHODS.md | 68642ed7d557ba81310d7517fc33f38d2a6e32ceb9f6d34d3373d572ecc11319 |
+| METHODS.md | cab529707304ec03a8cd92a4fc6f405d92b0c5323665b976409190b0354d1e20 |
 | NOTICE | 57f64e39e6a87d47a44223ead6024bb061a00de459e90b1d18e990d066ff4c61 |
-| PROJECT_BOOK.md | 90a12935519427bad7571e9185a316c379e90d24f29585b98f3a9a2c4b312ec9 |
+| PROJECT_BOOK.md | fb24a969597d2d89069f8e5f685aa327422b16be72f3d1f394259893957b1f36 |
 | README.md | 8cdb619561fce0d2f0c4e11862f3196e5eab045f339becbe2179a5115f9fcff5 |
 | astock_monitor/__init__.py | 72419c274eaa378b26ac16c5283c669dfcbd73dee8bc5291c2a5cab12db07667 |
 | astock_monitor/alpha_lite.py | 58570de90dda732561356df3486a0453cfa771d90e0a88ffbc60badb1a44e9fb |
@@ -60,6 +60,7 @@
 | results/meta_v0.json | 508f074b66fddc106eda3b961f74d88a8af911a11870242b4f3dea6a0b343791 |
 | results/poc4_rerun_verdict.json | 784a50633c350a5f8f55e5d7e8663b0feaedea7b4d7b50ad050c27a821690c7c |
 | results/regime_audit_verdict.json | c83a297d0aff6c5ac27577a476dd5afd630eeeccf5eeece551861b1d481f1c47 |
+| results/turnover_variants.json | 8af942d6e71ff7410e91e4fedf7653cf7f5fd57faeaa23b21987cef09ac06f59 |
 | run_daily.bat | 3d69f0723ab232bf14fc1c2198e8bcfab15a715cf0f5ae0977f53abba52d677d |
 | scripts/backfill_index_gap.py | 3b1b28551b63f8046088da7be39ae63aa84d56be7de4244a3d53d9bd0077d139 |
 | scripts/build_dashboard.py | 41cadc99118c90c276d764ffcef8be59fd9ff0225c9c2d3fd9059cfed70f6431 |
@@ -83,6 +84,7 @@
 | scripts/verify/poc4_rerun.py | 61e0975eccffd601ccd2e857bb3327e60d33a1eeea618e99c9263f4be055929c |
 | scripts/verify/regime_audit.py | 36570676efbf9b0f20dd48bd4eb451528b524978321e9bfdc74fe644f4317557 |
 | scripts/verify/storm_replay.py | fc29c27cb8f06672848b862ea81fad7849896634815ecdc8c40b576bf63baab3 |
+| scripts/verify/turnover_variants.py | eeab4b6c613e6079b55b218e55dff0fee8577534c483d557a0c8b034ddf3562a |
 | scripts/weekly_backup.bat | e76164175573ad9e197577e7024586118be2cb4b1275df7c56e3444e2ea3e6c5 |
 | tests/__init__.py | 735469839c842bc3fbc34792d87ecca2fb190d80bc5c631024bb850a07b5bbfb |
 | tests/test_alpha_lite.py | 7e8bd5541c7cbd374155f6b8e6d705cdeb19c87e5d069519b94fd03fbe9928ba |

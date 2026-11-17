@@ -68,11 +68,17 @@ def topk_hold(dd, k):
 
 
 def band_hold(dd, prev, k):
-    """持有带: 旧仓仍在 top HOLD_FRAC 内的保留;空槽用买入区(TOPK_FRAC)最优补足。"""
-    rank = dd["pred"].rank(pct=True, ascending=False)   # 1=最好
+    """持有带: 旧仓仍在 top HOLD_FRAC 内的保留;空槽用买入区(TOPK_FRAC)最优补足。
+
+    2026-11-18 修正: 原实现拿 pct 分位(0-1)与绝对数量 int(len*HF)(数百)比较,
+    条件恒真 → hold_zone=全体 → 持仓永不更换("死拿+门控"被误读为持有带)。
+    修正: pct 排名与 pct 阈值同刻度比较;method="first" 保证无并列。
+    (该 bug 被 HOLD_FRAC 敏感性扫描的四阈值同值指纹当场抓获——预注册扫描的胜利)
+    """
+    rank = dd["pred"].rank(method="first", ascending=False, pct=True)  # 0-1, 小=好
     dd = dd.assign(_rank=rank)
-    hold_zone = set(dd[dd["_rank"] <= int(len(dd) * HOLD_FRAC)]["symbol"])
-    buy_zone = dd[dd["_rank"] <= max(1, int(len(dd) * TOPK_FRAC))]
+    hold_zone = set(dd[dd["_rank"] <= HOLD_FRAC]["symbol"])
+    buy_zone = dd[dd["_rank"] <= TOPK_FRAC]
     keep = prev & hold_zone
     need = k - len(keep)
     fill = set()

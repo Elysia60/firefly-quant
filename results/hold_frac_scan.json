@@ -1,0 +1,25 @@
+{
+  "meta": "HOLD_FRAC sensitivity scan, DSR+3, preregistered rebuttal test for [S15]",
+  "scan": {
+    "0.3": {
+      "nav": 3.1576,
+      "ann": 0.1932,
+      "t": 2.271
+    },
+    "0.4": {
+      "nav": 3.1576,
+      "ann": 0.1932,
+      "t": 2.271
+    },
+    "0.5": {
+      "nav": 3.1576,
+      "ann": 0.1932,
+      "t": 2.271
+    },
+    "0.6": {
+      "nav": 3.1576,
+      "ann": 0.1932,
+      "t": 2.271
+    }
+  }
+}
