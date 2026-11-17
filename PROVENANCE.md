@@ -25,10 +25,12 @@
 | astock_monitor/alpha_lite.py | 58570de90dda732561356df3486a0453cfa771d90e0a88ffbc60badb1a44e9fb |
 | astock_monitor/audit.py | 91eeb5c2a4cede178dc1b267b6f10a7d52dc798aa39b81dadce933c2ca64c44e |
 | astock_monitor/calendar.py | cb29fc53a7055109240f17bc5a1902e4a476afa8bdd0cbbb53102e43b933483c |
+| astock_monitor/capability_router.py | d5f6fd60c57dc9c20988f63e2c2b2cfbc5126827cfe063086a3d76b0324180e6 |
 | astock_monitor/cli.py | d8daad3a9c6796ca2c6ba9aa17b8df898e83e1102e425d79b5691298c670af13 |
 | astock_monitor/collect.py | a468b47afa1db84bafaf1384a8618fb8e480402790f5dd60d5d20494e429c0c3 |
 | astock_monitor/config.py | 9cf4c715f34a351c845162a0493d03a102a642b55a6e33362826aa7f1cccd1f6 |
-| astock_monitor/doctor.py | 8e7d3fae308db2d8f7ac8e756a7e12c903ef874af4e9579e0e77c0b9bf89dc18 |
+| astock_monitor/cost_schedule.py | 0da3ce5649d38372a27ffc9de44798ed0d713bfc3d69104b988761bcb56be6fe |
+| astock_monitor/doctor.py | 085934ed5a6130e5b02a22861c8eb75a8dd6003164ff580c3c27ecfedf3e8137 |
 | astock_monitor/forecast.py | 78260362c3b7958573da39d4f092cd8968d94fc77bc8f616a22ced2c51b51791 |
 | astock_monitor/limits.py | cdc153a034fb0f529ea3773b398284bc472afaee8e1f8bc4965e863955517fa1 |
 | astock_monitor/metamdl.py | eb11c3e9b6ce3e22719b3bf3f99fdc576a64659786afb7144f86b20bdf5e171a |
@@ -40,6 +42,7 @@
 | astock_monitor/sentiment.py | 46079c28d1ee60837049e78a473e66d83621b111e2c43a8aa1ab9c0a84c87569 |
 | astock_monitor/signals.py | a2781175e9867c43cb525e57400a261035a6f740de3c1dae723d54cb38eea5dc |
 | astock_monitor/store.py | 4d820fa2d244937188c8d92dcafc68b959da2f70cb792d1c6850929a4ee2fff9 |
+| astock_monitor/strategy_guard.py | 699921f6a39e04541ac57f0f229a8b7df3d21d2e9c5ceff282a4a5ef4e72770d |
 | astock_monitor/triggers.py | 94d63708babd90e4d2748068ae16ac801392b390df39da68ea7726bb7af33b07 |
 | config.json | 3ca1b4bc8b3042cf1468850896b6f5cc74f295f2227b8dbb34633e0c7564e37c |
 | configs/cnequity.example.toml | b98a5b8a152162225a4dbb9e90a4606a5dad56ba18282afd3cc962b3cb432138 |
@@ -97,6 +100,7 @@
 | tests/test_audit.py | 4d829b366c05315df1cb813d5795383935661bc28a19d815b54b39ab92f12ead |
 | tests/test_backfill.py | bb050acd9855a2e516e2763cfd2cf151c86b703ca4ae0f312230e134bc40bfd6 |
 | tests/test_calendar.py | 8090b6a3f525079ee99598ccfd6730eb744117121c69971b51f4bc7200019459 |
+| tests/test_capability_router.py | ab784c32a11b76d5eaa4b7c97bab8e7ce41b576be612b9075a37c452b9a046ed |
 | tests/test_collect.py | e4b2fe6e8d2173cb5f5d6bd6b8242a3bff2d719018f838cc37d799f6f289da82 |
 | tests/test_doctor.py | 161d15596c5062e62de1c04349c821395b15ff94ae845ac6da95b1dd7fd4f4f6 |
 | tests/test_forecast.py | f51c897fea19b76a317aa64e185bd5c0009d09d44ef7b6fb70e8290f35f43c5d |

@@ -113,17 +113,34 @@ def check_limits_sample(cfg: dict) -> dict:
     cand = cand[cand["close"] >= cand["prev_close"] * 1.09]
     if cand.empty:
         return {"name": "limits_sample", "status": "PASS", "detail": "最近快照无涨停板股(正常行情),规则层待样本"}
-    matched = 0
-    for _, row in cand.head(20).iterrows():
+    # 2026-11-18 修正候选网:旧网把"大涨未封板"(20cm 板涨 10-16% 不触板)也当涨停样本,
+    # 造成 6/20 假 WARN——limits.py 与数据均无错。改为:仅验证**真封板**股
+    # (close==计算涨停价/跌停价),N 前缀新股(首日无涨跌幅)剔除,非封板剔除并计数。
+    matched, sealed_n, skipped = 0, 0, 0
+    for _, row in cand.iterrows():
+        name = str(row.get("name") or "")
+        if name.startswith("N"):
+            skipped += 1
+            continue
         on = date.fromisoformat(str(row["date"])) if row.get("date") else None
-        up, _dn = price_limits(float(row["prev_close"]), str(row["code"]),
-                               name=str(row.get("name") or ""), on_date=on)
-        matched += 1 if abs(up - float(row["close"])) < 0.005 else 0
-    total = min(20, len(cand))
-    if matched == total:
-        return {"name": "limits_sample", "status": "PASS", "detail": f"抽样 {total} 只涨停股,close==涨停价 全部吻合"}
+        up, dn = price_limits(float(row["prev_close"]), str(row["code"]),
+                              name=name, on_date=on)
+        close = float(row["close"])
+        if abs(close - up) < 0.005 or abs(close - dn) < 0.005:
+            sealed_n += 1
+            matched += 1 if abs(close - up) < 0.005 else 0
+        else:
+            skipped += 1
+        if sealed_n >= 20:
+            break
+    if sealed_n == 0:
+        return {"name": "limits_sample", "status": "PASS",
+                "detail": f"快照 {len(cand)} 只涨幅≥9%但均未封板(正常),规则层待封板样本"}
+    if matched == sealed_n:
+        return {"name": "limits_sample", "status": "PASS",
+                "detail": f"抽样 {sealed_n} 只真封板股,close==涨停价 全部吻合(剔除非封板 {skipped} 只)"}
     return {"name": "limits_sample", "status": "WARN",
-            "detail": f"抽样 {total} 只涨停股仅 {matched} 只吻合——检查名称/板块幅度口径(局限 L5)"}
+            "detail": f"真封板 {sealed_n} 只中 {sealed_n - matched} 只 close!=计算涨停价——检查名称/板块幅度口径(局限 L5)"}
 
 
 def check_deps() -> dict:
