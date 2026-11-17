@@ -76,13 +76,31 @@ def symbol_em(symbol: str) -> str:
     return ("sh" if exch == "SH" else "sz") + code
 
 
-def fetch_index_daily(symbol: str, start: str, end: str) -> pd.DataFrame:
-    """新浪指数日线(stock_zh_index_daily,全史一次)。
+def fetch_index_daily_em(symbol: str, start: str, end: str) -> pd.DataFrame:
+    """EM 指数日线(index_zh_a_hist, push2his 端点)。WAF 封锁期会断连。"""
+    import akshare as ak  # noqa: PLC0415
+    df = ak.index_zh_a_hist(symbol=symbol_em(symbol), period="daily",
+                            start_date=start, end_date=end)
+    if df is None or df.empty:
+        return pd.DataFrame()
+    ren = {"日期": "trade_date", "开盘": "open", "收盘": "close", "最高": "high",
+           "最低": "low", "成交量": "volume", "成交额": "amount"}
+    df = df.rename(columns=ren)
+    keep = [c for c in ("trade_date", "open", "high", "low", "close", "volume", "amount")
+            if c in df.columns]
+    df = df[keep].copy()
+    df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.date
+    for c in ("open", "high", "low", "close", "volume", "amount"):
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+    if "volume" in df.columns:
+        df["volume"] = (df["volume"] / 100.0).round().astype("Int64")  # 手
+    s, e = pd.Timestamp(start).date(), pd.Timestamp(end).date()
+    return df[(df["trade_date"] >= s) & (df["trade_date"] <= e)]
 
-    主源本应是 EM push2his(index_zh_a_hist),但 2026-11-16 起本机 IP 对 EM
-    数据端点被 WAF 拒(主站 200、带参数即断连)→ 备源新浪。[S1] 已对拍验证。
-    注意: 新浪 volume 为股数,湖内 tdx 行为手 → /100 换算;无成交额列 → NaN。
-    """
+
+def fetch_index_daily_sina(symbol: str, start: str, end: str) -> pd.DataFrame:
+    """新浪指数日线(stock_zh_index_daily,全史一次)。"""
     import akshare as ak  # noqa: PLC0415
     df = ak.stock_zh_index_daily(symbol=symbol_em(symbol))
     if df is None or df.empty:
@@ -128,13 +146,37 @@ def main() -> int:
 
     start_s = (pd.Timestamp(days[0]) - pd.Timedelta(days=5)).strftime("%Y%m%d")
     end_s = pd.Timestamp(days[-1]).strftime("%Y%m%d")
+    # 能力路由(P-REA-1 接线): index_bars 能力按路由顺序逐源尝试(EM→sina),
+    # 失败上报路由(冷却), 成功重置健康——11-16 类 WAF 事故时自动切 sina
+    from astock_monitor.capability_router import CapabilityRouter
+    from astock_monitor.collect import report_source_failure
+    router = CapabilityRouter.default()
+    router.load_state(REPO_ROOT / "data" / "state" / "capability_health.json")
+    source_chain = router.route_all("index_bars") or ["eastmoney", "sina"]
+    print("路由链:", " -> ".join(source_chain))
     have = {(r["symbol"], r["trade_date"].date() if hasattr(r["trade_date"], "date")
              else r["trade_date"]) for _, r in existing.iterrows()}
     out_frames = []
     for i, sym in enumerate(syms):
-        df = fetch_index_daily(sym, start_s, end_s)
+        df = pd.DataFrame()
+        used = None
+        for src_name in source_chain:
+            try:
+                df = (fetch_index_daily_em(sym, start_s, end_s)
+                      if src_name == "eastmoney"
+                      else fetch_index_daily_sina(sym, start_s, end_s))
+            except Exception as e:  # noqa: BLE001
+                print(f"  {sym}: 源 {src_name} 失败({type(e).__name__}),切下一源")
+                report_source_failure(src_name,
+                                      REPO_ROOT / "data" / "state" / "capability_health.json")
+                continue
+            if not df.empty:
+                used = src_name
+                break
+            report_source_failure(src_name,
+                                  REPO_ROOT / "data" / "state" / "capability_health.json")
         if df.empty:
-            print(f"  {sym}: EM 无返回,跳过")
+            print(f"  {sym}: 全源无返回,跳过")
             continue
         new = df[~df.apply(lambda r: (sym, r["trade_date"]) in have, axis=1)]
         new = new[new["trade_date"] < date.today()]  # 盘中不完整,不碰今天
@@ -143,7 +185,7 @@ def main() -> int:
         else:
             new.insert(0, "symbol", sym)
             new["pre_close"] = float("nan")
-            new["source"] = SOURCE
+            new["source"] = f"{SOURCE}_{used}" if used else SOURCE
             new["data_version"] = "v1"
             new["fetched_at"] = pd.Timestamp(datetime.now(timezone.utc))
             new["frequency"] = "1d"

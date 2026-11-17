@@ -26,8 +26,8 @@
 | astock_monitor/audit.py | 91eeb5c2a4cede178dc1b267b6f10a7d52dc798aa39b81dadce933c2ca64c44e |
 | astock_monitor/calendar.py | cb29fc53a7055109240f17bc5a1902e4a476afa8bdd0cbbb53102e43b933483c |
 | astock_monitor/capability_router.py | d5f6fd60c57dc9c20988f63e2c2b2cfbc5126827cfe063086a3d76b0324180e6 |
-| astock_monitor/cli.py | d8daad3a9c6796ca2c6ba9aa17b8df898e83e1102e425d79b5691298c670af13 |
-| astock_monitor/collect.py | a468b47afa1db84bafaf1384a8618fb8e480402790f5dd60d5d20494e429c0c3 |
+| astock_monitor/cli.py | 841957007b93165768001f4bdfb63dd7a9377f54747d85c78210aad2acdeb36f |
+| astock_monitor/collect.py | fec35cb8727aa578b7277807070ea7a33e96f3521f0433a793a74c6cadbb416d |
 | astock_monitor/config.py | 9cf4c715f34a351c845162a0493d03a102a642b55a6e33362826aa7f1cccd1f6 |
 | astock_monitor/cost_schedule.py | 0da3ce5649d38372a27ffc9de44798ed0d713bfc3d69104b988761bcb56be6fe |
 | astock_monitor/doctor.py | 085934ed5a6130e5b02a22861c8eb75a8dd6003164ff580c3c27ecfedf3e8137 |
@@ -50,6 +50,7 @@
 | docs/reading/mankiw-principles-firefly.md | 039b1d0a66f22dacb233e65c910ba1e00908373a4130b7a082e26de594205217 |
 | docs/reading/tvede-business-cycles-firefly.md | 74531b40c64003b595f529ecf2bab5a2f4e2d0079764d82ca95044fb15868a6d |
 | docs/research/README.md | 99f932ac7644a86794dddc2191b2860e53a7f8a63b9792d5fc5b905ab24b05f6 |
+| docs/research/kronos-vs-firefly.md | 31facff6a67fd04bb261fb88e27f84d0a919aaa2221661f1310777f7487ada97 |
 | docs/research/tsp-reverse-engineering.md | 9bbc3eb6cf99a243c4c5acf7670ee612d4929fc9499372ac87fbbcfb5a5dc076 |
 | docs/week3-report.md | 1da7fe5ad369e6dfc81402f5612351a88c2d2d52f6ad2ae5563442a816e07b84 |
 | results/alpha_ic_report.json | 45ca3ecb08b72a45e01d68156b261bc122fa59f96c9a09de6ed2906806aeeb9b |
@@ -69,8 +70,8 @@
 | results/poc4_rerun_verdict.json | 784a50633c350a5f8f55e5d7e8663b0feaedea7b4d7b50ad050c27a821690c7c |
 | results/regime_audit_verdict.json | c83a297d0aff6c5ac27577a476dd5afd630eeeccf5eeece551861b1d481f1c47 |
 | results/turnover_variants.json | 8af942d6e71ff7410e91e4fedf7653cf7f5fd57faeaa23b21987cef09ac06f59 |
-| run_daily.bat | 3d69f0723ab232bf14fc1c2198e8bcfab15a715cf0f5ae0977f53abba52d677d |
-| scripts/backfill_index_gap.py | 3b1b28551b63f8046088da7be39ae63aa84d56be7de4244a3d53d9bd0077d139 |
+| run_daily.bat | 305768ce3fc8dac6c934936911ca6b2d9fcb0cff1b8dd7dd28a41e1cd64e0a86 |
+| scripts/backfill_index_gap.py | 1ab0f9e9bd4a6a6beb271fc6e3a8620c4be7250d768c8c304db721b14dc9993b |
 | scripts/build_dashboard.py | 41cadc99118c90c276d764ffcef8be59fd9ff0225c9c2d3fd9059cfed70f6431 |
 | scripts/gh_api_push.py | 02c0685c6e3045cacfae85df295418da02e2e95c0f861cdb71f0869b4f7152e8 |
 | scripts/provenance_check.py | c5a729c9fe1371f70108a08e7e2f6d724b4e042659c2182a772ee4d3c6ac560a |

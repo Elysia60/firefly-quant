@@ -129,6 +129,25 @@ class RateLimiter:
         return self._blocked_until
 
 
+def report_source_failure(source: str = "eastmoney",
+                          state_path: str | Path | None = None) -> None:
+    """向能力路由上报源失败并持久化(2026-11-18 接线:跨能力健康感知)。
+
+    EM 的 spot/zt_pool/index 同域——一个能力被 WAF 拒,其余能力大概率同拒;
+    上报到路由冷却后,后续采集/回补可直接跳过 EM 试备源,不再浪费重试。
+    """
+    try:
+        from .capability_router import CapabilityRouter
+        repo_root = Path(__file__).resolve().parent.parent
+        sp = Path(state_path) if state_path else repo_root / "data" / "state" / "capability_health.json"
+        r = CapabilityRouter.default()
+        r.load_state(sp)
+        r.report_failure(source)
+        r.save_state(sp)
+    except Exception:  # noqa: BLE001 —— 健康上报绝不打断采集主流程
+        pass
+
+
 def guarded_call(limiter: RateLimiter, fn, *args, **kwargs):
     """限速 + 冷却检查 + 限流识别的标准调用包装。"""
     limiter.check_blocked()
@@ -138,6 +157,7 @@ def guarded_call(limiter: RateLimiter, fn, *args, **kwargs):
     except Exception as e:  # noqa: BLE001 — 识别后统一转译
         if is_rate_limit_error(e):
             limiter.trigger_backoff()
+            report_source_failure()
             raise RateLimitTriggered(f"触发东财限流,已进入退避: {e}") from e
         raise
 

@@ -90,6 +90,8 @@ def main(argv: list[str] | None = None) -> int:
     p_v = sub.add_parser("verify-poc4", help="复跑 PoC-4 接口对齐(需 akquant)")
     p_v.add_argument("--python", default=sys.executable, help="用于执行的 python(默认当前)")
 
+    p_fin = sub.add_parser("collect-financials", help="盈利数据:业绩报表全市场一张表(1请求/报告期,PIT披露时滞消费侧过滤)")
+    p_fin.add_argument("--period", required=True, help="报告期 YYYYMMDD,如 20260930")
     p_sent = sub.add_parser("collect-sentiment", help="情绪数据:涨停池(每日必采,仅留~3周)+两融全量回补")
     p_sent.add_argument("--date", default=None, help="YYYY-MM-DD,默认今天")
 
@@ -295,6 +297,16 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         finally:
             conn.close()
+
+    if args.cmd == "collect-financials":
+        from .financials import collect_yjbb
+        conn = _db(cfg)
+        try:
+            r = collect_yjbb(cfg, conn, args.period)
+        finally:
+            conn.close()
+        print(r)
+        return 0 if r["status"] in ("ok", "skipped") else 1
 
     if args.cmd == "collect-sentiment":
         from .sentiment import backfill_margin, collect_zt_pool
