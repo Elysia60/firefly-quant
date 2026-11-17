@@ -35,7 +35,7 @@
 | astock_monitor/notify_proactive.py | 37a5b81467b7c780efdd43cc277f7fae03f159308f383bc0f7c4e8a099d2ae39 |
 | astock_monitor/portfolio.py | 7003c0d5f25302d6e9b92c0c7decd1c2d3c9f95002d369c02d6380b8284bdef7 |
 | astock_monitor/regime.py | fb9bfae4d100781c339fe196c777cdb5667032eb3c034fbba2301c10ae6459c4 |
-| astock_monitor/report.py | 6b02cf819b737a23166c6436b2f7de6d68a6554625f0aa7219e85a679fc852b3 |
+| astock_monitor/report.py | e943e5e49a1e1e97e1be23ad42f210138c3c7ff69ccd0ef857fc39e4e8227280 |
 | astock_monitor/riskfactors.py | 15a49add05c98fee78cb970256de90940cb5732adb5d3b6164d3cc24bd72ece8 |
 | astock_monitor/sentiment.py | 46079c28d1ee60837049e78a473e66d83621b111e2c43a8aa1ab9c0a84c87569 |
 | astock_monitor/signals.py | a2781175e9867c43cb525e57400a261035a6f740de3c1dae723d54cb38eea5dc |
@@ -47,6 +47,7 @@
 | docs/reading/mankiw-principles-firefly.md | 039b1d0a66f22dacb233e65c910ba1e00908373a4130b7a082e26de594205217 |
 | docs/reading/tvede-business-cycles-firefly.md | 74531b40c64003b595f529ecf2bab5a2f4e2d0079764d82ca95044fb15868a6d |
 | docs/research/README.md | 99f932ac7644a86794dddc2191b2860e53a7f8a63b9792d5fc5b905ab24b05f6 |
+| docs/research/tsp-reverse-engineering.md | 9bbc3eb6cf99a243c4c5acf7670ee612d4929fc9499372ac87fbbcfb5a5dc076 |
 | docs/week3-report.md | 1da7fe5ad369e6dfc81402f5612351a88c2d2d52f6ad2ae5563442a816e07b84 |
 | results/alpha_ic_report.json | 45ca3ecb08b72a45e01d68156b261bc122fa59f96c9a09de6ed2906806aeeb9b |
 | results/calendar_audit_verdict.json | 04b34706b8e62fa172cfec88a9bcca1afcdc3e71ab8a61d97899904c7ffd7f9b |

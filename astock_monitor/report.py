@@ -20,6 +20,10 @@ from pathlib import Path
 
 from .notify_proactive import push_lines
 
+# 触发面板的周期理论身份(Tvede 精读 §6:领先→同步→滞后确认管线)
+# 展示层重排依据——[S12] 的非玄学解释:领先灯本来就先于滞后灯
+TRIGGER_ORDER = {"T-ERP": 0, "T-杠杆": 1, "T-波动": 2, "T-宽度": 3, "T-年线": 4}
+
 
 def build_report(
     date_str: str,
@@ -35,6 +39,7 @@ def build_report(
     portfolio_changes: dict,
     doctor_summary: dict | None,
     conclusions_snapshot: dict,
+    strategy_health: list[dict] | None = None,
 ) -> str:
     """构建每日 Markdown 报告(csqaq 五面格式)。"""
     regime_names = {0: "bull", 1: "neutral", 2: "bear"}
@@ -59,7 +64,8 @@ def build_report(
     if triggers:
         fired = [k for k, v in triggers.items() if v.get("fired")]
         if fired:
-            lines.append(f"- 🔴 触发器激活: {', '.join(fired)}")
+            fired.sort(key=lambda k: (TRIGGER_ORDER.get(k, 99), k))
+            lines.append(f"- 🔴 触发器激活(领先→滞后): {', '.join(fired)}")
         else:
             lines.append("- 🟢 五触发器全部未激活")
     lines.append("")
@@ -97,6 +103,12 @@ def build_report(
     lines += ["## ⑤ 风控面", ""]
     lines.append(f"- regime 门控: {regime_name}(bear→空仓/缩仓)")
     lines.append(f"- 回撤熔断: 待实装(路线图 P6)")
+    if strategy_health:
+        for row in strategy_health:
+            mark = {"healthy": "🟢", "watch": "🟡", "retired": "🔴",
+                    "unknown": "⚪"}.get(row.get("state"), "⚪")
+            lines.append(f"- {mark} 策略守护 {row.get('strategy','?')}: "
+                         f"{row.get('state','?')}({row.get('reason','')})")
     lines.append("")
 
     # ⑥ 方法论自检(五层分析法, 2026-11-18 定案)

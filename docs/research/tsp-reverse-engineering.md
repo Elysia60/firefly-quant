@@ -113,6 +113,12 @@
 
 ## 6. 吸收清单(按优先级,全部预注册)
 
+> **执行状态(2026-11-18 当日)**:P-REA-1 ✅ `astock_monitor/capability_router.py`
+> (+18 测,P-REA-2 ✅ `tests/test_capability_router.py` ContractSnapshot 组,P-REA-3 ✅
+> `astock_monitor/strategy_guard.py` + 日报风控面整合)——模块层已落地;管线层接线
+> (collect.py 多源化/日报 bat)为下一阶段。税制成本表 `cost_schedule.py` 同日落地
+> (现行段与注册表 0.002 严格对齐,2023-08-28 前样本 0.0025)。176→194 测全绿。
+
 1. **能力路由矩阵**([P-REA-1],架构级):collect 层重构——每类数据(日K/分钟/实时/
    财务/复权)声明能力,EM/新浪/TDX/东财按能力注册,主源挂自动降级备源,
    未声明口径的数据源拒绝接入(fail-closed)。直接免疫 11-16 类事故。
