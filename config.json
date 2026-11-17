@@ -46,5 +46,10 @@
     "state_file": "data/state/circuit_breaker.json",
     "events_file": "data/state/circuit_breaker_events.jsonl",
     "comment": "P6 回撤熔断(利弗莫尔 10% 规则机器化,DSR 中性):-10% 单笔离场 / -15% 组合降半 / -25% 清仓+冷却(重启需人工过审)"
+  },
+  "paper_account": {
+    "account_file": "data/state/paper_account.json",
+    "equity_file": "data/state/paper_equity.jsonl",
+    "comment": "纸面账户=熔断净值来源(自动估值,半自动执行);初始现金 100 万,只读湖快照收盘价"
   }
 }

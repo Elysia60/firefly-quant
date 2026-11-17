@@ -40,6 +40,9 @@ call :step forecast-judge >> "%LOG%" 2>&1
 if errorlevel 1 goto fail
 call :step forecast-summary --out data\state\scoreboard_daily.json >> "%LOG%" 2>&1
 if errorlevel 1 goto fail
+rem 2026-11-18: P6 熔断净值来源(纸面账户估值;无账户时 rc=0 跳过,不阻塞日更)
+call :step paper-mark >> "%LOG%" 2>&1
+if errorlevel 1 echo [%DATE% %TIME%] WARN paper-mark failed >> "%LOG%"
 call :py scripts\build_dashboard.py >> "%LOG%" 2>&1
 if errorlevel 1 goto fail
 if "%COLLECT_FAIL%"=="1" goto partial

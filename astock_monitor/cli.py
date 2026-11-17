@@ -96,6 +96,15 @@ def main(argv: list[str] | None = None) -> int:
     p_sent.add_argument("--date", default=None, help="YYYY-MM-DD,默认今天")
 
     sub.add_parser("triggers", help="2027 watch 触发面板(跨越才推送,不 front-run)")
+    p_pi = sub.add_parser("paper-init", help="初始化纸面账户(默认现金 100 万;熔断的净值来源)")
+    p_pi.add_argument("--cash", type=float, default=1_000_000.0)
+    p_pm = sub.add_parser("paper-mark", help="纸面账户每日估值(读湖快照收盘价)+ 熔断评估")
+    p_pm.add_argument("--date", default=None, help="YYYY-MM-DD,缺省今天")
+    p_pm.add_argument("--targets", default=None, help="可选:目标权重 JSON,先调仓再估值")
+    p_pr = sub.add_parser("paper-rebalance", help="纸面账户按目标权重调仓(手数向下取整,卖前买后)")
+    p_pr.add_argument("--targets", required=True, help="目标权重 JSON {code: weight}")
+    p_pr.add_argument("--date", default=None)
+    p_pm2 = sub.add_parser("paper-status", help="查看纸面账户与熔断状态")
     p_cb = sub.add_parser("circuit-check", help="回撤熔断 P6:评估持仓/组合回撤(只降不升,fail-closed;DSR 中性)")
     p_cb.add_argument("--positions", required=True, help="持仓 JSON {symbol:{entry_price,current_price,weight}}")
     p_cb.add_argument("--portfolio-dd", type=float, required=True, help="组合回撤(负数,如 -0.18)")
@@ -417,6 +426,85 @@ def main(argv: list[str] | None = None) -> int:
             from .notify_proactive import push_lines
             pf = push_lines(lines)
             print(f"已推送触发告警: {pf} ({len(new_fires)} 项新跨越)")
+        return 0
+
+    if args.cmd in ("paper-init", "paper-mark", "paper-rebalance", "paper-status"):
+        import json as _json
+        from datetime import date as _date
+        from pathlib import Path as _Path
+        from . import circuit_breaker as CB
+        from . import paper_account as PA
+
+        acct_f = resolve_path(cfg, "paper_account.account_file")
+        eq_f = resolve_path(cfg, "paper_account.equity_file")
+        cb_state_f = resolve_path(cfg, "circuit_breaker.state_file")
+        cb_events_f = resolve_path(cfg, "circuit_breaker.events_file")
+        day = getattr(args, "date", None) or _date.today().isoformat()
+
+        if args.cmd == "paper-init":
+            if acct_f.exists():
+                print(_json.dumps({"status": "exists", "path": str(acct_f)}, ensure_ascii=False))
+                return 0
+            PA.save_account(acct_f, PA.init_account(args.cash, day))
+            print(_json.dumps({"status": "ok", "cash": args.cash, "path": str(acct_f)},
+                              ensure_ascii=False, indent=2))
+            return 0
+
+        if args.cmd == "paper-status":
+            acct = PA.load_account(acct_f)
+            cb = CB.load_state(cb_state_f)
+            print(_json.dumps({"account": acct, "circuit": cb}, ensure_ascii=False, indent=2))
+            return 0
+
+        acct = PA.load_account(acct_f)
+        if acct is None:
+            print(_json.dumps({"status": "no_account",
+                               "note": "先跑 paper-init;本次跳过(不阻塞日更)"},
+                              ensure_ascii=False))
+            return 0
+
+        # 价格:湖 normalized/daily_snapshot
+        import pandas as _pd
+        from .store import read_parquet as _rp
+        snap = resolve_path(cfg, "paths.lake_norm") / "daily_snapshot" / f"dt={day.replace('-', '')}" / "part.parquet"
+        if not snap.exists():
+            print(_json.dumps({"status": "data_missing", "day": day,
+                               "note": "当日快照不存在(未采集/非交易日)→ fail-closed 不估值",
+                               "snap": str(snap)}, ensure_ascii=False))
+            return 0
+        df = _rp(snap)
+        prices = {str(r["code"]): float(r["close"]) for _, r in df.iterrows()
+                  if r.get("close") == r.get("close")}
+        if args.cmd == "paper-rebalance" or getattr(args, "targets", None):
+            tf = _Path(args.targets)
+            targets = _json.loads(tf.read_text(encoding="utf-8-sig"))
+            trades = PA.rebalance(acct, targets, prices, day)
+            PA.save_account(acct_f, acct)
+        else:
+            trades = []
+        summary = PA.mark_to_market(acct, prices, day)
+        if summary["status"] == "ok":
+            PA.save_account(acct_f, acct)
+            PA.append_equity(eq_f, {"day": day, "equity": summary["equity"],
+                                    "drawdown": summary["drawdown"],
+                                    "high_water": summary["high_water"]})
+            rep = CB.evaluate(summary["circuit_input"]["positions"],
+                              summary["circuit_input"]["portfolio_drawdown"],
+                              state=CB.load_state(cb_state_f))
+            CB.save_state(cb_state_f, rep["state"])
+            CB.append_event(cb_events_f, {"event": "eval", "source": "paper-mark",
+                                          "day": day, "mode": rep["mode"],
+                                          "portfolio_dd": rep["portfolio_drawdown"]})
+            if rep["mode"] == CB.MODE_CLEARED and rep["prev_mode"] != CB.MODE_CLEARED:
+                from .notify_proactive import push_lines
+                push_lines([f"[{day}] 回撤熔断清仓:纸面组合回撤 {rep['portfolio_drawdown']:.1%} ≤ -25%;"
+                            f"冷却中,重启需人工过审(circuit-reset --approved-by)"])
+            summary["circuit"] = {"mode": rep["mode"], "actions": rep["actions"],
+                                  "requires_manual_reset": rep["requires_manual_reset"]}
+        print(_json.dumps({"status": summary["status"], "day": day,
+                           "trades": trades, **{k: v for k, v in summary.items()
+                                                if k != "circuit_input"}},
+                          ensure_ascii=False, indent=2, default=str))
         return 0
 
     if args.cmd in ("circuit-check", "circuit-reset"):
