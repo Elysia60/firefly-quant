@@ -47,11 +47,12 @@
 | astock_monitor/triggers.py | 94d63708babd90e4d2748068ae16ac801392b390df39da68ea7726bb7af33b07 |
 | config.json | 3ca1b4bc8b3042cf1468850896b6f5cc74f295f2227b8dbb34633e0c7564e37c |
 | configs/cnequity.example.toml | b98a5b8a152162225a4dbb9e90a4606a5dad56ba18282afd3cc962b3cb432138 |
-| docs/optimization-roadmap.md | 9b38480e25633172eb9069736ddaf32c2944a0d265a599adadb366bad63c8f60 |
+| docs/optimization-roadmap.md | fc07ca3d76ac5d4736dca40d162beb2a49c964bd73f52ca40a8fa63fdc8ca458 |
 | docs/reading/mankiw-principles-firefly.md | 039b1d0a66f22dacb233e65c910ba1e00908373a4130b7a082e26de594205217 |
 | docs/reading/tvede-business-cycles-firefly.md | 74531b40c64003b595f529ecf2bab5a2f4e2d0079764d82ca95044fb15868a6d |
 | docs/research/README.md | 99f932ac7644a86794dddc2191b2860e53a7f8a63b9792d5fc5b905ab24b05f6 |
 | docs/research/kronos-vs-firefly.md | 31facff6a67fd04bb261fb88e27f84d0a919aaa2221661f1310777f7487ada97 |
+| docs/research/rule-changes-timeline.md | c196ada9928271b5f45e3b9cc80ed5443663347e150858f5f4e53e3391796946 |
 | docs/research/tsp-reverse-engineering.md | 9bbc3eb6cf99a243c4c5acf7670ee612d4929fc9499372ac87fbbcfb5a5dc076 |
 | docs/week3-report.md | 1da7fe5ad369e6dfc81402f5612351a88c2d2d52f6ad2ae5563442a816e07b84 |
 | results/alpha_ic_report.json | 45ca3ecb08b72a45e01d68156b261bc122fa59f96c9a09de6ed2906806aeeb9b |
