@@ -45,6 +45,7 @@
 | configs/cnequity.example.toml | b98a5b8a152162225a4dbb9e90a4606a5dad56ba18282afd3cc962b3cb432138 |
 | docs/optimization-roadmap.md | 9b38480e25633172eb9069736ddaf32c2944a0d265a599adadb366bad63c8f60 |
 | docs/reading/mankiw-principles-firefly.md | 039b1d0a66f22dacb233e65c910ba1e00908373a4130b7a082e26de594205217 |
+| docs/reading/tvede-business-cycles-firefly.md | 74531b40c64003b595f529ecf2bab5a2f4e2d0079764d82ca95044fb15868a6d |
 | docs/research/README.md | 99f932ac7644a86794dddc2191b2860e53a7f8a63b9792d5fc5b905ab24b05f6 |
 | docs/week3-report.md | 1da7fe5ad369e6dfc81402f5612351a88c2d2d52f6ad2ae5563442a816e07b84 |
 | results/alpha_ic_report.json | 45ca3ecb08b72a45e01d68156b261bc122fa59f96c9a09de6ed2906806aeeb9b |
@@ -60,6 +61,7 @@
 | results/lgbm_v3.json | 7922027d9eb04f49f512cfc468c98d6a2cecb7f71553f5dce13a1350a02c9e33 |
 | results/lgbm_walkforward.json | b047f5653ed0d7ee848bb65001f7b8e88298c97f103e4248bbeefecd69287b14 |
 | results/meta_v0.json | 508f074b66fddc106eda3b961f74d88a8af911a11870242b4f3dea6a0b343791 |
+| results/minsky_accel.json | 62aca47bba55cf1281a809f31a83c6a10e195734c9ed57f1178faecc761dc2fa |
 | results/poc4_rerun_verdict.json | 784a50633c350a5f8f55e5d7e8663b0feaedea7b4d7b50ad050c27a821690c7c |
 | results/regime_audit_verdict.json | c83a297d0aff6c5ac27577a476dd5afd630eeeccf5eeece551861b1d481f1c47 |
 | results/turnover_variants.json | 8af942d6e71ff7410e91e4fedf7653cf7f5fd57faeaa23b21987cef09ac06f59 |
@@ -83,6 +85,7 @@
 | scripts/verify/lgbm_v3.py | 92465aa71dbb4d2f551a5c80ad9c895b82f0b84b8916bff485a150e63656865f |
 | scripts/verify/lgbm_walkforward.py | 86e0b45be0512cdabeb78e9c40e13226dac8dfe25fd5285bbe9a5dad58dc6378 |
 | scripts/verify/meta_v0.py | d500ba9c88423171fc818c22590373f078ecfd60098439b5fceafd5264bee08a |
+| scripts/verify/minsky_accel.py | e699e306f309ace7120c6082cee6d11ea757038bf7a7e6106aaff80b23c4841c |
 | scripts/verify/poc4_rerun.py | 61e0975eccffd601ccd2e857bb3327e60d33a1eeea618e99c9263f4be055929c |
 | scripts/verify/regime_audit.py | 36570676efbf9b0f20dd48bd4eb451528b524978321e9bfdc74fe644f4317557 |
 | scripts/verify/storm_replay.py | fc29c27cb8f06672848b862ea81fad7849896634815ecdc8c40b576bf63baab3 |
