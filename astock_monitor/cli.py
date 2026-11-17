@@ -96,6 +96,14 @@ def main(argv: list[str] | None = None) -> int:
     p_sent.add_argument("--date", default=None, help="YYYY-MM-DD,默认今天")
 
     sub.add_parser("triggers", help="2027 watch 触发面板(跨越才推送,不 front-run)")
+    p_cb = sub.add_parser("circuit-check", help="回撤熔断 P6:评估持仓/组合回撤(只降不升,fail-closed;DSR 中性)")
+    p_cb.add_argument("--positions", required=True, help="持仓 JSON {symbol:{entry_price,current_price,weight}}")
+    p_cb.add_argument("--portfolio-dd", type=float, required=True, help="组合回撤(负数,如 -0.18)")
+    p_cb.add_argument("--limit-down", default="", help="今日跌停卖不出的 symbol(逗号分隔)")
+    p_cb.add_argument("--push", action="store_true", help="清仓档位推送主动消息")
+    p_cbr = sub.add_parser("circuit-reset", help="人工过审复位(仅 cleared 状态有效;半自动纪律)")
+    p_cbr.add_argument("--approved-by", required=True, help="谁批的(必填,入审计)")
+    p_cbr.add_argument("--reason", default="", help="复位理由")
 
     p_aud = sub.add_parser("audit-signal", help="结论审计:NW t + bootstrap CI + 事件研究对照(随机化推断)")
     p_aud.add_argument("--verdict", default="avoid_watch", choices=["avoid_watch", "buy_watch", "neutral"])
@@ -409,6 +417,36 @@ def main(argv: list[str] | None = None) -> int:
             from .notify_proactive import push_lines
             pf = push_lines(lines)
             print(f"已推送触发告警: {pf} ({len(new_fires)} 项新跨越)")
+        return 0
+
+    if args.cmd in ("circuit-check", "circuit-reset"):
+        import json as _json
+        from pathlib import Path as _Path
+        from . import circuit_breaker as CB
+        state_f = resolve_path(cfg, "circuit_breaker.state_file")
+        events_f = resolve_path(cfg, "circuit_breaker.events_file")
+        if args.cmd == "circuit-reset":
+            st = CB.load_state(state_f)
+            new = CB.reset(st, approved_by=args.approved_by, reason=args.reason)
+            CB.save_state(state_f, new)
+            CB.append_event(events_f, {"event": "manual_reset", "by": args.approved_by,
+                                       "reason": args.reason, "mode": new.get("mode")})
+            print(_json.dumps(new, ensure_ascii=False, indent=2))
+            return 0
+        positions = _json.loads(_Path(args.positions).read_text(encoding="utf-8-sig"))
+        ld = tuple(s.strip() for s in args.limit_down.split(",") if s.strip())
+        rep = CB.evaluate(positions, args.portfolio_dd,
+                          state=CB.load_state(state_f), limit_down=ld)
+        CB.save_state(state_f, rep["state"])
+        CB.append_event(events_f, {"event": "eval", "mode": rep["mode"],
+                                   "portfolio_dd": rep["portfolio_drawdown"],
+                                   "actions": [a["action"] for a in rep["actions"]]})
+        print(_json.dumps(rep, ensure_ascii=False, indent=2, default=str))
+        if args.push and rep["mode"] == CB.MODE_CLEARED:
+            from .notify_proactive import push_lines
+            pf = push_lines([f"[{date.today().isoformat()}] 回撤熔断清仓:组合回撤 "
+                             f"{rep['portfolio_drawdown']:.1%} ≤ -25%;冷却中,重启需人工过审"])
+            print(f"已推送: {pf}")
         return 0
 
     if args.cmd == "verify-poc4":

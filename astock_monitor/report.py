@@ -40,6 +40,7 @@ def build_report(
     doctor_summary: dict | None,
     conclusions_snapshot: dict,
     strategy_health: list[dict] | None = None,
+    circuit_breaker: dict | None = None,
 ) -> str:
     """构建每日 Markdown 报告(csqaq 五面格式)。"""
     regime_names = {0: "bull", 1: "neutral", 2: "bear"}
@@ -102,7 +103,12 @@ def build_report(
     # ⑤ 风控面
     lines += ["## ⑤ 风控面", ""]
     lines.append(f"- regime 门控: {regime_name}(bear→空仓/缩仓)")
-    lines.append(f"- 回撤熔断: 待实装(路线图 P6)")
+    if circuit_breaker:
+        from .circuit_breaker import render_line as _cb_line
+        lines.append(_cb_line(circuit_breaker))
+    else:
+        lines.append("- 回撤熔断(P6): 模块已实装(circuit_breaker.py;参数 -10%/-15%/-25%),"
+                     "日报接入需实时净值(当前未接入)")
     if strategy_health:
         for row in strategy_health:
             mark = {"healthy": "🟢", "watch": "🟡", "retired": "🔴",

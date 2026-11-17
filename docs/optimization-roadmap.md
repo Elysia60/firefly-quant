@@ -110,6 +110,14 @@
 - 反推依据:利弗莫尔三次破产的同一结构=全仓+杠杆+个人判断守不住自己的规则;
   熔断的意义=把"认错"从心理动作变成机器动作(1940 教训:知道全部正确规则的人依然毁灭)
 
+**实装状态(2026-11-18,DSH):已实装 `astock_monitor/circuit_breaker.py`(+ `tests/test_circuit_breaker.py` 29 测)。**
+- 状态机 normal→half→cleared;cleared 粘性(必须 `circuit-reset --approved-by` 人工过审)
+- fail-closed:净值缺失 → block_new_entries,动作只降不升;跌停卖不出 → pending_limit_down(不假装执行)
+- 高水位持久化 `data/state/circuit_breaker.json`;审计 `data/state/circuit_breaker_events.jsonl`
+- 日报 ⑤ 风控面已可渲染(`build_report(circuit_breaker=...)`);**接入实时净值后自动生效**
+- 纪律:熔断=灾后止损,与 [S16] 门控(灾前防御)独立触发,不产生买入信号
+
+
 ### P8 · Meta-labeling 层([S2] 的教科书解法,2026-11-13 侦察定案,公式级伪代码就绪)
 
 **核心思想**:把被证伪的“全仓开关”变成“条件仓位”——[S1] 触发但元模型 p 低 → 减仓而非反复开平,正面削减鞭打成本。
