@@ -35,7 +35,7 @@
 | astock_monitor/notify_proactive.py | 37a5b81467b7c780efdd43cc277f7fae03f159308f383bc0f7c4e8a099d2ae39 |
 | astock_monitor/portfolio.py | 7003c0d5f25302d6e9b92c0c7decd1c2d3c9f95002d369c02d6380b8284bdef7 |
 | astock_monitor/regime.py | fb9bfae4d100781c339fe196c777cdb5667032eb3c034fbba2301c10ae6459c4 |
-| astock_monitor/report.py | f9ef2246b70cae0c3900d11718ab553cefac582a042a171aa595ec9cc8c08b8b |
+| astock_monitor/report.py | 6b02cf819b737a23166c6436b2f7de6d68a6554625f0aa7219e85a679fc852b3 |
 | astock_monitor/riskfactors.py | 15a49add05c98fee78cb970256de90940cb5732adb5d3b6164d3cc24bd72ece8 |
 | astock_monitor/sentiment.py | 46079c28d1ee60837049e78a473e66d83621b111e2c43a8aa1ab9c0a84c87569 |
 | astock_monitor/signals.py | a2781175e9867c43cb525e57400a261035a6f740de3c1dae723d54cb38eea5dc |
@@ -53,6 +53,7 @@
 | results/feature_ablation.json | b84e25fd12bb179467eeb239b1ff4780115316eed9f7b66a0ee61105be222f06 |
 | results/final_combination.json | 7f5f2b069215e765e5cf9f7de2e4034526d275683d0cfd0252ecba225a788a25 |
 | results/gated_strategy_sim.json | 1349cd8d1289f2c984798384d5b04a5a5b9d02334d09d16f44c2bedd30fdfb0e |
+| results/hold_frac_scan.json | 77d058e5a4bb99129c239c49aa591e09bde628e219394f81f939d496484bc246 |
 | results/lgbm_baseline.json | 81597562d7dff474cb4b9c3b189e6e92fa4a35c7bad700c87503380f932fb251 |
 | results/lgbm_v2_comparison.json | b536fb75240c30ea110de73f3b01d8ff9cd7809d6497c07b3f04dbb4e0c0875e |
 | results/lgbm_v3.json | 7922027d9eb04f49f512cfc468c98d6a2cecb7f71553f5dce13a1350a02c9e33 |
@@ -98,6 +99,7 @@
 | tests/test_metamdl.py | 91eab92c89fbc63ccb847aad605a49954afe85135da56191ca35beb10cc6d0d1 |
 | tests/test_portfolio.py | 7341ee1077df8d01e02a1633a4633681b5c45a47f4bd3c2124ce3be777b50848 |
 | tests/test_regime.py | be6988d45de0ac2299c8f0024075511f9726fb2bd170a982f1c0d4ebd9c600d5 |
+| tests/test_report.py | ab935b23a0995ae986995c14db8c22823eaf9a045355b8b3465c92a4d7f1caeb |
 | tests/test_riskfactors.py | f665a20bc1193d115b52ff5951b603f31c156dd871d96f44e147154c89206869 |
 | tests/test_signal_context.py | 15e422d7cbb9d5846d7988a0d0d020d4f5ffe047bc67f548dc9611c8a02e8852 |
 | tests/test_signals.py | 709f1f00b308de2fe55f93d3b973727f0b91cbd51593a30765c345faf07be439 |
