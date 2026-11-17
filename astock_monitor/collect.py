@@ -188,6 +188,31 @@ def normalize_em_hist(df):
     return out[BAR_COLUMNS]
 
 
+
+# 东财快照用 "-" 表示停牌/无值;直接落 parquet 会触发
+# pyarrow ArrowInvalid: Could not convert '-' with type str: tried to convert to double
+# (2026-11-17 日更 FAILED rc=1 根因)。raw 层在写盘前必须把 EM 空值 token 清洗成 NaN。
+EM_NULL_TOKENS = ("-", "--", "", "None", "null", "nan")
+EM_NUMERIC_RAW_COLS = ("今开", "最高", "最低", "最新价", "昨收", "成交量", "成交额", "涨跌幅", "换手率")
+
+
+def sanitize_raw_spot(df):
+    """raw 快照写盘前清洗:EM 空值 token -> NaN,并把数值列强制为 float。
+
+    只改数值列(code/name 等文本列原样);幂等;不删除行(停牌股保留,数值为空)。
+    """
+    import pandas as pd  # noqa: PLC0415 — 数据路径才需要
+
+    out = df.copy()
+    for col in EM_NUMERIC_RAW_COLS:
+        if col in out.columns:
+            s = out[col]
+            if s.dtype == object:
+                s = s.replace(list(EM_NULL_TOKENS), pd.NA)
+            out[col] = pd.to_numeric(s, errors="coerce")
+    return out
+
+
 def normalize_spot(df):
     """东财全市场快照 → 统一列;date 由采集日填充。"""
     out = df.rename(columns=SPOT_RENAME)
@@ -346,6 +371,9 @@ def collect_daily(cfg: dict, conn, day: date | None = None, fetcher=None, limite
         # 默认走自建快照:优先单请求拉满,失败按页补齐(akshare 的 59 页无间隔翻页会触发断连)
         fetcher = lambda: fetch_spot_em(limiter=limiter)  # noqa: E731
     raw_df = guarded_call(limiter, fetcher)
+    # 写盘前沿用清洗(raw + normalized 两份都走同一份干净 DataFrame):
+    # 任何 fetcher/回退路径带来的 EM "-" 占位符都在此归一,不再让 parquet 类型检查崩
+    raw_df = sanitize_raw_spot(raw_df)
     norm = normalize_spot(raw_df)
     norm = norm[norm["code"].notna()]
     # date 列 = 采集日(快照语义;按源日期归档是 csqaq 教训 #4)

@@ -57,6 +57,63 @@ class FakeLimiter(collect.RateLimiter):
         self._last_call = time.monotonic()
 
 
+class SanitizeRawSpotTest(unittest.TestCase):
+    """2026-11-17 日更 FAILED rc=1 根因回归:EM '-' 空值必须清洗成 NaN 再落 parquet。"""
+
+    def test_dash_tokens_become_nan(self):
+        import pandas as pd
+        df = pd.DataFrame({
+            "代码": ["000001", "600000"], "名称": ["A", "B"],
+            "今开": ["-", "9.5"], "最新价": ["--", "9.8"], "成交量": ["", 1000],
+        })
+        out = collect.sanitize_raw_spot(df)
+        self.assertTrue(pd.api.types.is_float_dtype(out["今开"]))
+        self.assertTrue(pd.isna(out["今开"].iloc[0]))
+        self.assertAlmostEqual(out["今开"].iloc[1], 9.5)
+        self.assertEqual(list(out["代码"]), ["000001", "600000"])  # 文本列不动
+
+    def test_rows_preserved(self):
+        import pandas as pd
+        df = pd.DataFrame({"代码": ["1", "2"], "名称": ["x", "y"], "今开": ["-", "-"]})
+        self.assertEqual(len(collect.sanitize_raw_spot(df)), 2)  # 停牌股保留,不删行
+
+
+class CollectDailyDashValueTest(unittest.TestCase):
+    """端到端:fetcher 返回含 '-' 的快照,日更仍应成功落盘(而不是 pyarrow 崩)。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.cfg = _temp_cfg(self.tmp.name)
+        self.conn = get_conn(Path(self.cfg["paths"]["db"]))
+        init_db(self.conn)
+
+    def tearDown(self):
+        self.conn.close()
+        self.tmp.cleanup()
+
+    def test_collect_daily_with_dash_values(self):
+        def fetcher():
+            df = _fake_spot_df()
+            df["今开"] = df["今开"].astype(object)
+            df["成交量"] = df["成交量"].astype(object)
+            df.loc[0, "今开"] = "-"          # 模拟停牌/无开盘价
+            df.loc[0, "成交量"] = "--"
+            return df
+
+        limiter = FakeLimiter(min_interval=0.0,
+                              state_path=Path(self.cfg["collect"]["cooldown_file"]))
+        r = collect.collect_daily(self.cfg, self.conn, day=date(2026, 11, 13),
+                                  fetcher=fetcher, limiter=limiter)
+        self.assertEqual(r["status"], "ok")
+        raw_path = Path(self.cfg["paths"]["lake_raw"]) / "akshare" / "spot" / "dt=20261113" / "part.parquet"
+        self.assertTrue(raw_path.exists())
+        from astock_monitor.store import read_parquet
+        raw = read_parquet(raw_path)
+        import pandas as pd
+        self.assertTrue(pd.api.types.is_float_dtype(raw["今开"]))
+        self.assertTrue(pd.isna(raw["今开"].iloc[0]))
+
+
 class RateLimiterTest(unittest.TestCase):
     def test_interval_respected(self):
         # 间隔 0.3s、阈值 0.2s:留足 Windows sleep 粒度(15.6ms)与满载机器的计时抖动
