@@ -99,6 +99,39 @@ def build_report(
     lines.append(f"- 回撤熔断: 待实装(路线图 P6)")
     lines.append("")
 
+    # ⑥ 方法论自检(五层分析法, 2026-11-18 定案)
+    # 每层一句核心追问 + 萤火已有资产的对应回答; 意义层只管"为什么建系统",
+    # 永不进单日决策回路(单日决策只归纪律层——意义感是仓位失控的源头)。
+    lines += ["## ⑥ 方法论自检(五层)", ""]
+    if doctor_summary:
+        lines.append(f"- 信息层问「我知道什么」: 见①数据面; 体检 红{doctor_summary.get('red', '?')}/黄{doctor_summary.get('yellow', '?')}")
+    else:
+        lines.append("- 信息层问「我知道什么」: 见①数据面; 体检未运行")
+    verdict = (signals_today or {}).get("verdict", "neutral")
+    logic_note = {
+        "avoid_watch": "适用域=neutral/bear 庭([S1]), bull 庭无信息; 5/5 前导是必要方向非充分信号([S12])",
+        "buy_watch": "[S2] 日频开关已证伪——观察级不构成行动依据",
+        "neutral": "无方向主张; 反方陈述在册可查",
+    }.get(verdict, "无方向主张; 反方陈述在册可查")
+    lines.append(f"- 逻辑层问「关系是什么」: 今日 {verdict} → {logic_note}")
+    fired = [k for k, v in (triggers or {}).items() if v.get("fired")]
+    lines.append(f"- 系统层问「嵌在什么结构」: regime={regime_name}; 触发器 {len(fired)}/5 激活"
+                 + (f"({', '.join(fired)})" if fired else "")
+                 + "; 反馈回路=alpha→收割→成本→新鲜度([S15] 守恒)")
+    greed_s = f"{margin_greed:.0%}" if margin_greed is not None else "缺"
+    breadth_s = f"{breadth:.1%}" if breadth is not None else "缺"
+    erp_s = f"{erp_pct:.0f} 分位" if erp_pct is not None else "缺"
+    lines.append(f"- 人性层问「背后的人怎么想」: 杠杆贪婪={greed_s}, 宽度={breadth_s}, ERP={erp_s}")
+    n_fired = len(fired)
+    if regime_state == 2 or n_fired >= 2:
+        phase = "防御(触发面板接管; 意义层不进决策回路)"
+    elif n_fired == 1 or verdict == "avoid_watch":
+        phase = "戒备(预注册剧本已就位)"
+    else:
+        phase = "观察(数据积累中)"
+    lines.append(f"- 意义层问「对我意味着什么」: 2027 剧本阶段={phase}")
+    lines.append("")
+
     # 结论面
     lines += ["## 结论面", ""]
     snap = conclusions_snapshot
