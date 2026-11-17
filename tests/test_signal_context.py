@@ -80,5 +80,20 @@ class BreadthGapTest(unittest.TestCase):
         self.assertIsNone(momentum_score(None, 3))
 
 
+
+class SignalAsDictTest(unittest.TestCase):
+    """CLI signal 的 print 路径契约: as_dict 必须 JSON 可序列化。"""
+
+    def test_as_dict_json_serializable(self):
+        import json as _json
+        from astock_monitor.signals import Signal
+        sig = Signal(signal_date=date(2026, 11, 17), trend_score=52.0,
+                     composite=44.8, verdict="avoid_watch",
+                     components={"breadth": 0.1957, "greed": 44.2})
+        raw = _json.dumps(sig.as_dict(), ensure_ascii=False)  # 不应抛 TypeError
+        back = _json.loads(raw)
+        self.assertEqual(back["signal_date"], "2026-11-17")
+        self.assertEqual(back["verdict"], "avoid_watch")
+
 if __name__ == "__main__":
     unittest.main()

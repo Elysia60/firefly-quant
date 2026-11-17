@@ -246,11 +246,22 @@ def _spot_fetch_page(requester, limiter, pn: int, pz: int,
 
 
 def _diff_to_spot_df(rows: list[dict]):
-    """东财 diff 列表 → 与 akshare 同名的中文列 DataFrame(normalize_spot 直接复用)。"""
+    """东财 diff 列表 → 与 akshare 同名的中文列 DataFrame(normalize_spot 直接复用)。
+
+    2026-11-17 教训(15:40 实弹 rc=1): 停牌/零成交股的价格字段是 '-' 占位符,
+    原样落 parquet 时 pyarrow 类型转换崩溃(ArrowInvalid) → 整日快照丢失。
+    此处统一清洗: 文本列(代码/名称)保留, 其余列 to_numeric(errors="coerce")
+    ——'-' 与任何非数值一律变 NaN, 由下游 normalize_spot 的缺失语义处理。
+    """
     import pandas as pd  # noqa: PLC0415
 
     records = [{_SPOT_COLUMNS[k]: item.get(k) for k in _SPOT_COLUMNS} for item in rows]
-    return pd.DataFrame.from_records(records)
+    df = pd.DataFrame.from_records(records)
+    text_cols = {"代码", "名称"}
+    for c in df.columns:
+        if c not in text_cols:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+    return df
 
 
 def fetch_spot_em(limiter=None, requester=None, page_size: int = 100,

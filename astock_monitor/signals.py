@@ -56,7 +56,8 @@ class Signal:
     data_quality: DataQuality = field(default_factory=DataQuality)
 
     def as_dict(self) -> dict:
-        return {"signal_date": self.signal_date, "trend_score": self.trend_score,
+        return {"signal_date": self.signal_date.isoformat(),
+                "trend_score": self.trend_score,
                 "composite": round(self.composite, 2), "verdict": self.verdict,
                 "tier": self.tier, "components": self.components,
                 "data_quality": self.data_quality.as_dict()}

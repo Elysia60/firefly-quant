@@ -285,5 +285,48 @@ class SpotFetchTest(unittest.TestCase):
         self.assertFalse(collect.is_rate_limit_error(err))
 
 
+
+class DiffToSpotDfTest(unittest.TestCase):
+    """'-' 占位符清洗回归(2026-11-17 15:40 实弹 rc=1 教训)。
+
+    停牌/零成交股的价格字段是 '-', 原样落 parquet 时 pyarrow 崩溃整日丢失。
+    契约: 文本列(代码/名称)保留, 其余列 '-' 与非数值一律 → NaN。
+    """
+
+    def test_dash_placeholder_becomes_nan(self):
+        import pandas as pd
+        rows = [{"f12": "000001", "f14": "平安银行", "f17": "10.50", "f15": "10.80",
+                 "f16": "10.30", "f2": "10.60", "f18": "10.45", "f5": "1000000",
+                 "f6": "10500000", "f3": 1.43, "f8": 0.52},
+                {"f12": "000002", "f14": "停牌股", "f17": "-", "f15": "-",
+                 "f16": "-", "f2": "-", "f18": "20.00", "f5": "-", "f6": "-",
+                 "f3": "-", "f8": "-"}]
+        df = collect._diff_to_spot_df(rows)
+        self.assertEqual(df.loc[0, "今开"], 10.50)          # 正常行不受影响
+        self.assertEqual(df.loc[0, "代码"], "000001")       # 文本列保留
+        self.assertTrue(pd.isna(df.loc[1, "今开"]))          # '-' → NaN
+        self.assertTrue(pd.isna(df.loc[1, "最新价"]))
+        self.assertEqual(df.loc[1, "昨收"], 20.00)           # 昨收有值保留
+        self.assertEqual(df.loc[1, "名称"], "停牌股")
+        # 落 parquet 不再爆类型转换(整日快照丢失的根因)
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            from astock_monitor.store import write_parquet_atomic
+            out = Path(td) / "part.parquet"
+            write_parquet_atomic(df, out)
+            back = pd.read_parquet(out)
+            self.assertEqual(len(back), 2)
+
+    def test_normalize_spot_survives_nan(self):
+        rows = [{"f12": "000003", "f14": "退市股", "f17": "-", "f15": "-",
+                 "f16": "-", "f2": "-", "f18": "5.00", "f5": "-", "f6": "-",
+                 "f3": "-", "f8": "-"}]
+        df = collect._diff_to_spot_df(rows)
+        from astock_monitor.collect import normalize_spot
+        out = normalize_spot(df)
+        self.assertEqual(len(out), 1)  # 清洗后下游不再崩
+
+
+
 if __name__ == "__main__":
     unittest.main()
