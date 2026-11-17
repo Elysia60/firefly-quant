@@ -31,6 +31,7 @@
 | astock_monitor/config.py | 9cf4c715f34a351c845162a0493d03a102a642b55a6e33362826aa7f1cccd1f6 |
 | astock_monitor/cost_schedule.py | 0da3ce5649d38372a27ffc9de44798ed0d713bfc3d69104b988761bcb56be6fe |
 | astock_monitor/doctor.py | 085934ed5a6130e5b02a22861c8eb75a8dd6003164ff580c3c27ecfedf3e8137 |
+| astock_monitor/financials.py | 1d7a13ba20f66b84becc54c55035401f51451fb1970d1aaf3946b6c47d1d805d |
 | astock_monitor/forecast.py | 78260362c3b7958573da39d4f092cd8968d94fc77bc8f616a22ced2c51b51791 |
 | astock_monitor/limits.py | cdc153a034fb0f529ea3773b398284bc472afaee8e1f8bc4965e863955517fa1 |
 | astock_monitor/metamdl.py | eb11c3e9b6ce3e22719b3bf3f99fdc576a64659786afb7144f86b20bdf5e171a |
@@ -104,6 +105,7 @@
 | tests/test_capability_router.py | ab784c32a11b76d5eaa4b7c97bab8e7ce41b576be612b9075a37c452b9a046ed |
 | tests/test_collect.py | e4b2fe6e8d2173cb5f5d6bd6b8242a3bff2d719018f838cc37d799f6f289da82 |
 | tests/test_doctor.py | 161d15596c5062e62de1c04349c821395b15ff94ae845ac6da95b1dd7fd4f4f6 |
+| tests/test_financials.py | b31a0c2d2b805e908f81874fdd92fd4ef9ede8cce5a67911ffb76e198e8a1305 |
 | tests/test_forecast.py | f51c897fea19b76a317aa64e185bd5c0009d09d44ef7b6fb70e8290f35f43c5d |
 | tests/test_limits.py | 11020024dcc3dc67564fec8772d6527148c2e5eef2f61e58ce46b8be103ffb21 |
 | tests/test_metamdl.py | 91eab92c89fbc63ccb847aad605a49954afe85135da56191ca35beb10cc6d0d1 |
