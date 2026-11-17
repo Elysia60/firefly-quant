@@ -26,7 +26,7 @@
 | astock_monitor/audit.py | 91eeb5c2a4cede178dc1b267b6f10a7d52dc798aa39b81dadce933c2ca64c44e |
 | astock_monitor/calendar.py | cb29fc53a7055109240f17bc5a1902e4a476afa8bdd0cbbb53102e43b933483c |
 | astock_monitor/cli.py | d8daad3a9c6796ca2c6ba9aa17b8df898e83e1102e425d79b5691298c670af13 |
-| astock_monitor/collect.py | 8b7c26a775f6d53b70d1dec7b728cad7c6d342ca4a5e22b468309f596b6dc43d |
+| astock_monitor/collect.py | a468b47afa1db84bafaf1384a8618fb8e480402790f5dd60d5d20494e429c0c3 |
 | astock_monitor/config.py | 9cf4c715f34a351c845162a0493d03a102a642b55a6e33362826aa7f1cccd1f6 |
 | astock_monitor/doctor.py | 8e7d3fae308db2d8f7ac8e756a7e12c903ef874af4e9579e0e77c0b9bf89dc18 |
 | astock_monitor/forecast.py | 78260362c3b7958573da39d4f092cd8968d94fc77bc8f616a22ced2c51b51791 |
@@ -38,7 +38,7 @@
 | astock_monitor/report.py | f9ef2246b70cae0c3900d11718ab553cefac582a042a171aa595ec9cc8c08b8b |
 | astock_monitor/riskfactors.py | 15a49add05c98fee78cb970256de90940cb5732adb5d3b6164d3cc24bd72ece8 |
 | astock_monitor/sentiment.py | 46079c28d1ee60837049e78a473e66d83621b111e2c43a8aa1ab9c0a84c87569 |
-| astock_monitor/signals.py | f655952f3c277ac2391eebb9de423d4a861a5ebab9d8c1bc2adb5ccb99857622 |
+| astock_monitor/signals.py | a2781175e9867c43cb525e57400a261035a6f740de3c1dae723d54cb38eea5dc |
 | astock_monitor/store.py | 4d820fa2d244937188c8d92dcafc68b959da2f70cb792d1c6850929a4ee2fff9 |
 | astock_monitor/triggers.py | 94d63708babd90e4d2748068ae16ac801392b390df39da68ea7726bb7af33b07 |
 | config.json | 3ca1b4bc8b3042cf1468850896b6f5cc74f295f2227b8dbb34633e0c7564e37c |
@@ -89,7 +89,7 @@
 | tests/test_audit.py | 4d829b366c05315df1cb813d5795383935661bc28a19d815b54b39ab92f12ead |
 | tests/test_backfill.py | bb050acd9855a2e516e2763cfd2cf151c86b703ca4ae0f312230e134bc40bfd6 |
 | tests/test_calendar.py | 8090b6a3f525079ee99598ccfd6730eb744117121c69971b51f4bc7200019459 |
-| tests/test_collect.py | acc1086e7de965479aaa23499df096b25093e615632b7fc144e2a1f0a66a90c4 |
+| tests/test_collect.py | e4b2fe6e8d2173cb5f5d6bd6b8242a3bff2d719018f838cc37d799f6f289da82 |
 | tests/test_doctor.py | 161d15596c5062e62de1c04349c821395b15ff94ae845ac6da95b1dd7fd4f4f6 |
 | tests/test_forecast.py | f51c897fea19b76a317aa64e185bd5c0009d09d44ef7b6fb70e8290f35f43c5d |
 | tests/test_limits.py | 11020024dcc3dc67564fec8772d6527148c2e5eef2f61e58ce46b8be103ffb21 |
@@ -97,7 +97,7 @@
 | tests/test_portfolio.py | 7341ee1077df8d01e02a1633a4633681b5c45a47f4bd3c2124ce3be777b50848 |
 | tests/test_regime.py | be6988d45de0ac2299c8f0024075511f9726fb2bd170a982f1c0d4ebd9c600d5 |
 | tests/test_riskfactors.py | f665a20bc1193d115b52ff5951b603f31c156dd871d96f44e147154c89206869 |
-| tests/test_signal_context.py | 1ca76597f879b0706129594f31f05f6fd3ec2b9b76c7db4e3e1d3418fbf1e0e0 |
+| tests/test_signal_context.py | 15e422d7cbb9d5846d7988a0d0d020d4f5ffe047bc67f548dc9611c8a02e8852 |
 | tests/test_signals.py | 709f1f00b308de2fe55f93d3b973727f0b91cbd51593a30765c345faf07be439 |
 | tests/test_store.py | 0300183a2f635953d6eafd80ef76de226566dc9633a10509164a35704cae5b40 |
 | tests/test_triggers.py | 74855b3c4c2f7acd64fba4b0561a57308de8e4654b5297185fd02308806f52e4 |
