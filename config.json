@@ -8,7 +8,8 @@
     "lake_raw": "data/lake/raw",
     "lake_norm": "data/lake/normalized",
     "state_dir": "data/state",
-    "cnequity_lake": "data/cnequity-lake"
+    "cnequity_lake": "data/cnequity-lake",
+    "results_dir": "results"
   },
   "collect": {
     "min_interval_seconds": 1.0,

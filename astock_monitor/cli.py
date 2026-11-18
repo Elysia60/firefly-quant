@@ -125,6 +125,8 @@ def main(argv: list[str] | None = None) -> int:
     p_sig.add_argument("--index", default="000300.SH", help="指数符号,默认沪深300")
     p_sig.add_argument("--require-session", action="store_true",
                        help="自动化守卫:信号日非交易日则跳过(防周末信号污染 forecast_log)")
+    p_db = sub.add_parser("decision-brief", help="每日决策简报(融合 signal/判卷/账户/熔断;非投资建议)")
+    p_db.add_argument("--date", default=None, help="简报日 YYYY-MM-DD,默认今天")
 
     sub.add_parser("forecast-judge", help="判卷到期信号(T+5/T+20,真实数据,不提前猜)")
 
@@ -213,7 +215,8 @@ def main(argv: list[str] | None = None) -> int:
         print(d.reason)
         return 0 if d.allowed else 1
 
-    if args.cmd in ("signal", "forecast-judge", "forecast-replay", "forecast-summary"):
+    if args.cmd in ("signal", "forecast-judge", "forecast-replay", "forecast-summary",
+                    "decision-brief"):
         from . import calendar as astock_cal
         from . import forecast as F
         from .signals import generate_signal, load_index_closes
@@ -243,6 +246,33 @@ def main(argv: list[str] | None = None) -> int:
                 import json as _json
                 print(_json.dumps(sig.as_dict(), ensure_ascii=False, indent=2))
                 print(f"落盘 {n} 行(forecast_log)")
+                return 0
+            if args.cmd == "decision-brief":
+                import json as _json
+                from datetime import date as _date
+                from pathlib import Path as _Path
+                from . import paper_account as PA
+                from .decision_brief import (build_brief, judge_accuracy,
+                                             latest_signal_row, render)
+                acct = PA.load_account(resolve_path(cfg, "paper_account.account_file"))
+                eq_f = resolve_path(cfg, "paper_account.equity_file")
+                eq_curve = []
+                if eq_f.exists():
+                    eq_curve = [_json.loads(l) for l in
+                                eq_f.read_text(encoding="utf-8").splitlines() if l.strip()]
+                cb_state_f = resolve_path(cfg, "circuit_breaker.state_file")
+                breaker = (_json.loads(cb_state_f.read_text(encoding="utf-8"))
+                           if cb_state_f.exists() else {})
+                day = getattr(args, "date", None) or _date.today().isoformat()
+                brief = build_brief(latest_signal_row(conn), judge_accuracy(conn),
+                                    acct, breaker, eq_curve, day)
+                md = render(brief)
+                out_dir = _Path(resolve_path(cfg, "paths.results_dir")) / "decision_brief"
+                out_dir.mkdir(parents=True, exist_ok=True)
+                out = out_dir / f"{brief['day']}.md"
+                out.write_text(md, encoding="utf-8")
+                print(md)
+                print(f"落盘 {out}")
                 return 0
             if args.cmd == "forecast-summary":
                 import json as _json
