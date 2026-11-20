@@ -264,8 +264,13 @@ def main(argv: list[str] | None = None) -> int:
                 breaker = (_json.loads(cb_state_f.read_text(encoding="utf-8"))
                            if cb_state_f.exists() else {})
                 day = getattr(args, "date", None) or _date.today().isoformat()
+                try:
+                    _closes = load_index_closes(lake, "000300.SH")
+                except Exception:
+                    _closes = []  # 湖缺数据 → 简报市场语境降级,不阻塞
                 brief = build_brief(latest_signal_row(conn), judge_accuracy(conn),
-                                    acct, breaker, eq_curve, day)
+                                    acct, breaker, eq_curve, day,
+                                    index_closes=_closes)
                 md = render(brief)
                 out_dir = _Path(resolve_path(cfg, "paths.results_dir")) / "decision_brief"
                 out_dir.mkdir(parents=True, exist_ok=True)

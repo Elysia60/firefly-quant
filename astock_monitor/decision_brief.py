@@ -28,6 +28,8 @@ import sqlite3
 from datetime import date, datetime
 from pathlib import Path
 
+from .position import suggested_size
+
 # 纪律常数（与 portfolio.py 同源，不另立数字）
 SINGLE_CAP = 0.35
 BEAR_SCALE = 0.3
@@ -108,15 +110,62 @@ def decide_action(breaker_mode: str, manual_reset: bool,
             "invalidated_when": "信号生成后自动更新"}
 
 
+def compute_market_context(index_closes: list | None,
+                           signal_date: str | None) -> dict | None:
+    """市场语境:regime 三票二(官方 PIT 取用口) + 年化已实现波动。
+
+    index_closes: [(date, close), ...](与 cli load_index_closes 同源);
+    regime 走 R.daily_regime + R.asof(严格早于信号日,防泄漏)。
+    """
+    if not index_closes:
+        return None
+    from . import regime as R
+    reg = R.daily_regime(index_closes)
+    row = None
+    if signal_date:
+        try:
+            row = R.asof(reg, date.fromisoformat(signal_date))
+        except ValueError:
+            row = None
+    if row is None:
+        row = R.asof(reg, date.max)
+    closes = [float(c) for _, c in index_closes]
+    vol_pct = None
+    if len(closes) >= 21:
+        rets = [closes[i] / closes[i - 1] - 1.0 for i in range(len(closes) - 20, len(closes))]
+        mean = sum(rets) / len(rets)
+        std = (sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)) ** 0.5
+        vol_pct = round(std * (250 ** 0.5) * 100, 2)
+    return {"regime_state": (row or {}).get("regime"),
+            "regime_detail": {k: row.get(k) for k in ("gate", "breadth250", "vol_pct")} if row else None,
+            "realized_vol_pct": vol_pct}
+
+
+def _judge_win_rate(judge: dict | None) -> float | None:
+    """判卷区 → 总命中率(跨窗口平均,预注册口径);无数据 None(诚实降级)。"""
+    if not judge:
+        return None
+    rates = [v["rate"] for v in judge.values() if v.get("judged")]
+    return round(sum(rates) / len(rates), 3) if rates else None
+
+
 def build_brief(latest: dict | None, judge: dict | None,
                 acct: dict, breaker: dict,
                 equity_curve: list[dict] | None = None,
-                day: str | None = None) -> dict:
-    """纯融合:五个已有产物的 dict → 简报 dict。不读盘不联网。"""
+                day: str | None = None,
+                index_closes: list | None = None) -> dict:
+    """纯融合:已有产物 dict(+可选指数收盘) → 简报 dict。不读盘不联网。"""
     paper = _paper_metrics(acct, equity_curve)
     action = decide_action(breaker.get("mode", "normal"),
                            bool(breaker.get("manual_reset_required")),
                            (latest or {}).get("verdict"), paper["drawdown"])
+    ctx = compute_market_context(index_closes, (latest or {}).get("signal_date"))
+    win_rate = _judge_win_rate(judge)
+    pos = suggested_size(ctx["realized_vol_pct"] if ctx else None,
+                         win_rate, None,
+                         ctx["regime_state"] if ctx else None,
+                         breaker_mode=breaker.get("mode", "normal"),
+                         manual_reset=bool(breaker.get("manual_reset_required")))
     return {
         "day": day or date.today().isoformat(),
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -126,6 +175,8 @@ def build_brief(latest: dict | None, judge: dict | None,
         "breaker": {"mode": breaker.get("mode"),
                     "manual_reset_required": bool(breaker.get("manual_reset_required")),
                     "last_drawdown": breaker.get("last_drawdown")},
+        "market_ctx": ctx,
+        "position": pos,
         "action": action,
         "disclaimer": DISCLAIMER,
     }
@@ -173,6 +224,27 @@ def render(brief: dict) -> str:
     lines.append(f"- 高水位回撤: {p.get('drawdown') if p.get('drawdown') is not None else '无数据'}"
                  f" ｜ 熔断 mode: **{cb.get('mode')}**"
                  + ("（需人工复位）" if cb.get("manual_reset_required") else ""))
+    lines.append("")
+    ctx = brief.get("market_ctx")
+    pos = brief.get("position") or {}
+    lines.append("## 市场语境与仓位")
+    if ctx:
+        regime_names = {0: "BULL", 1: "NEUTRAL", 2: "BEAR"}
+        rs = ctx.get("regime_state")
+        lines.append(f"- regime 三票二: **{regime_names.get(rs, '数据不足')}**"
+                     f"（gate={ctx.get('regime_detail', {}).get('gate')} "
+                     f"vol分位={ctx.get('regime_detail', {}).get('vol_pct')}）")
+        lines.append(f"- 年化已实现波动: {ctx.get('realized_vol_pct')}%")
+    else:
+        lines.append("- 市场语境缺失（无指数收盘数据）")
+    if pos.get("size") is not None:
+        bounds = pos.get("bounds") or {}
+        b_str = " ｜ ".join(f"{k}={v if v is not None else '缺数据'}" for k, v in bounds.items())
+        lines.append(f"- **建议仓位: {pos['size']:.0%}**（约束源={pos.get('binding')};"
+                     f"半Kelly{'已计' if pos.get('kelly_used') else '缺判卷数据未计'}）")
+        lines.append(f"- 三项边界: {b_str}")
+    else:
+        lines.append(f"- 建议仓位: 不给出（{pos.get('note', '数据不足')}）")
     lines.append("")
     lines.append("*失效即作废，不恋战。*")
     return "\n".join(lines) + "\n"
