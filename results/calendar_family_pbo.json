@@ -1,0 +1,33 @@
+{
+ "pbo": 0.5426,
+ "band": "IS 赢家大概率过拟合(负面结论可信度上升)",
+ "n_combos": 12870,
+ "n_overfit": 6983,
+ "n_blocks": 16,
+ "n_strategies": 4,
+ "T": 144,
+ "logit_mean": 11.703,
+ "method": "CSCV (Bailey-Borwein-Lopez de Prado-Zhu 2017), 精确枚举无采样",
+ "strategies": [
+  "A_hold",
+  "B_avoid_month_end",
+  "C_avoid_month_start",
+  "D_avoid_monday"
+ ],
+ "T_trimmed": {
+  "from": 146,
+  "to": 144
+ },
+ "grid_span": [
+  "2014-11-12",
+  "2026-10-21"
+ ],
+ "rule_defs": {
+  "A_hold": "基线持有",
+  "B_avoid_month_end": "规避月末 3 日([S3] 边缘)",
+  "C_avoid_month_start": "规避月初 2 日",
+  "D_avoid_monday": "规避周一"
+ },
+ "criteria": "<=0.2 家族有效 / 0.2-0.5 中度 / >0.5 无效([S3]降级警示)",
+ "note": "[S22] 第三枪(日历家族);口径同前两枪"
+}
