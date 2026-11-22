@@ -1,0 +1,62 @@
+{
+ "total_seconds": 126.6,
+ "steps": [
+  {
+   "step": "doctor",
+   "rc": 0,
+   "seconds": 2.6,
+   "artifacts_missing": [],
+   "tail": "01.SZ 14 天涨跌幅对拍一致 (max diff=0.00e+00)\n  [PASS] dq_sanity        最近 2 分区 11991 行: OHLC/价格/涨跌幅三清洁\n  [PASS] bars_freshness   2026-11-20(800 只)距今 3 天——新鲜\n"
+  },
+  {
+   "step": "collect-daily",
+   "rc": 1,
+   "seconds": 0.1,
+   "artifacts_missing": [],
+   "tail": ""
+  },
+  {
+   "step": "signal",
+   "rc": 0,
+   "seconds": 0.7,
+   "artifacts_missing": [],
+   "tail": "a_quality\": {\n    \"breadth\": \"ok\",\n    \"sentiment\": \"ok\",\n    \"gap_days\": 8,\n    \"banner\": \"数据缺口 8 天,趋势分可信度降级(csqaq 缺口纪律)\"\n  }\n}\n落盘 2 行(forecast_log)\n"
+  },
+  {
+   "step": "forecast-judge",
+   "rc": 0,
+   "seconds": 0.6,
+   "artifacts_missing": [],
+   "tail": "本次判卷 0 条\n"
+  },
+  {
+   "step": "forecast-summary",
+   "rc": 0,
+   "seconds": 29.4,
+   "artifacts_missing": [],
+   "tail": " },\n    \"by_verdict_days\": {\n      \"avoid_watch\": 1450,\n      \"neutral\": 1302,\n      \"buy_watch\": 145\n    }\n  }\n}\n落盘 data\\state\\scoreboard_daily.json\n"
+  },
+  {
+   "step": "paper-mark",
+   "rc": 0,
+   "seconds": 0.6,
+   "artifacts_missing": [],
+   "tail": "closed 不估值\", \"snap\": \"C:\\\\Users\\\\14676\\\\Documents\\\\02-项目开发\\\\股市量化\\\\astock-monitor\\\\data\\\\lake\\\\normalized\\\\daily_snapshot\\\\dt=20261123\\\\part.parquet\"}\n"
+  },
+  {
+   "step": "candidates",
+   "rc": 0,
+   "seconds": 90.7,
+   "artifacts_missing": [],
+   "tail": "NW t=+1.96 未过 2.0),2025 失效年(−0.014)如实入册——候选名单非荐股,失效即弃\"\n }\n}\n落盘 C:\\Users\\14676\\Documents\\02-项目开发\\股市量化\\astock-monitor\\data\\state\\candidates_latest.json\n"
+  },
+  {
+   "step": "decision-brief",
+   "rc": 0,
+   "seconds": 1.9,
+   "artifacts_missing": [],
+   "tail": "tes_latest.json;买入前过 limits.check_order)\n\n\n*失效即作废，不恋战。*\n\n落盘 C:\\Users\\14676\\Documents\\02-项目开发\\股市量化\\astock-monitor\\results\\decision_brief\\2026-11-23.md\n"
+  }
+ ],
+ "all_ok": false
+}

@@ -44,9 +44,15 @@ S7_DISCLAIMER = ("[S7] 候选·边缘级:OOS Rank IC +0.058(NW t=+1.96 未过 2.
                  "2025 失效年(−0.014)如实入册——候选名单非荐股,失效即弃")
 
 
-def _panel_and_label(lake: Path, min_symbols: int = 700) -> tuple:
-    """与 lgbm_baseline.main 同源:完整天 → 因子面板 → 前向标签。"""
+def _panel_and_label(lake: Path, min_symbols: int = 700,
+                     universe: set | None = None) -> tuple:
+    """与 lgbm_baseline.main 同源:完整天 → 因子面板 → 前向标签。
+    universe: 符号集合过滤(全市场回填后面板会含 5000+ 只,不筛会把
+    内存撑爆——本机 ~2GB 约束;默认 hs800 宇宙)。"""
     bars = AL.load_bars_complete(lake, min_symbols=min_symbols)
+    if universe:
+        bars = bars[bars["symbol"].isin(universe)].copy()
+        print(f"[candidates] 宇宙过滤: {len(bars)} 行(限 {len(universe)} 只)", flush=True)
     panel = AL.compute_factor_panel(bars)
     closes = bars[["symbol", "trade_date", "close"]]
     panel = AL.forward_label(panel, closes, horizon=HORIZON)
@@ -70,7 +76,8 @@ def _tradability_mask(panel: pd.DataFrame, bars_raw: pd.DataFrame) -> pd.DataFra
 
 def daily_candidates(lake: Path, topk: int = 10,
                      min_train_days: int = 500,
-                     asof: str | None = None) -> dict:
+                     asof: str | None = None,
+                     universe_file: Path | None = None) -> dict:
     """训练(全部 <asof 的历史) → 预测最新日 → TopK 候选(逆波动率加权)。
 
     返回 {as_of, n_train, candidates: [{symbol, pred, weight}], meta}。
@@ -78,7 +85,10 @@ def daily_candidates(lake: Path, topk: int = 10,
     """
     t0 = time.time()
     print("[candidates] 1/4 加载 bars+面板...", flush=True)
-    panel, bars_raw = _panel_and_label(lake)
+    universe = None
+    if universe_file and Path(universe_file).exists():
+        universe = {l.strip() for l in Path(universe_file).read_text(encoding="utf-8").splitlines() if l.strip()}
+    panel, bars_raw = _panel_and_label(lake, universe=universe)
     print(f"[candidates] 2/4 面板就绪 {len(panel)} 行 {round(time.time()-t0,1)}s", flush=True)
     panel = _tradability_mask(panel, bars_raw)
     panel = panel[~panel["untradeable"].fillna(False)]

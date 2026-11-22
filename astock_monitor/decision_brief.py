@@ -242,6 +242,12 @@ def render(brief: dict) -> str:
     lines.append("## 市场语境与仓位")
     if ctx:
         regime_names = {0: "BULL", 1: "NEUTRAL", 2: "BEAR"}
+        # vol 危险区警示(2026-11-22 学习报告预注册,11-23 实施):
+        # 实证=美股 11 月案例,vol 分位先行于价格危机约 5 周
+        _vp = (ctx.get("regime_detail") or {}).get("vol_pct")
+        if _vp is not None and _vp > 0.9:
+            lines.append(f"- ⚠ 波动危险区: 20 日波动处于 500 日分位 {_vp:.0%}"
+                         f"——该区域历史先行于价格危机,收紧一切新开仓")
         bars_age = ctx.get("bars_age_days")
         if bars_age is not None and bars_age > 3:
             lines.append(f"- ⚠ 个股数据截止 {ctx.get('bars_last_date')}"

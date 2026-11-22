@@ -39,13 +39,14 @@ def main() -> int:
     if not CNE.exists():
         print(json.dumps({"status": "cne_not_found", "path": str(CNE)}, ensure_ascii=False))
         return 1
+    # 全市场扫(cne 文档: 单日=全市场,成本按 symbol 计)——不再限定 hs800;
+    # 宇宙过滤在 candidates.py 侧做(内存约束)
     codes = [l.strip() for l in CODES_FILE.read_text(encoding="utf-8").splitlines() if l.strip()]
-    syms = ",".join(symbol_cne(c) for c in codes)
     start = (date.today() - timedelta(days=days)).isoformat()
     end = date.today().isoformat()
     proc = subprocess.run(
         [str(CNE), "backfill", "daily_bars", "--config", str(LAKE_CFG),
-         "--start", start, "--end", end, "--symbols", syms],
+         "--start", start, "--end", end],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
         timeout=1800)
     ok = proc.returncode == 0
