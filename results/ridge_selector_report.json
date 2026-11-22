@@ -1,0 +1,30 @@
+{
+ "model": "Ridge(alpha=1.0)",
+ "features": [
+  "KMID",
+  "KSFT",
+  "ROC5",
+  "ROC20",
+  "STD20",
+  "RSV20",
+  "CORR20",
+  "CNTP20",
+  "VMA20"
+ ],
+ "n_train_total": 1022434,
+ "n_test_days": 677,
+ "oos_mean_rank_ic": 0.04568,
+ "nw_t": 1.669,
+ "ic_gt_0_ratio": 0.583,
+ "top_coefs": {
+  "STD20": -0.9191,
+  "ROC20": 0.1087,
+  "KMID": -0.0752,
+  "ROC5": 0.0666,
+  "RSV20": 0.0272
+ },
+ "verdict": "负面入册",
+ "elapsed_s": 121.6,
+ "compare_S7": "[S7] LGBM: IC +0.058 t=1.96 → Ridge 对比见报告",
+ "disclaimer": "预注册纪律:判定写死,负面入册,DSR+1"
+}
