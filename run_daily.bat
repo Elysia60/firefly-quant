@@ -44,6 +44,9 @@ rem 2026-11-18: P6 熔断净值来源(纸面账户估值;无账户时 rc=0 跳�
 call :step paper-mark >> "%LOG%" 2>&1
 if errorlevel 1 echo [%DATE% %TIME%] WARN paper-mark failed >> "%LOG%"
 rem 2026-11-19: decision brief (fuse signal/judge/account/breaker; fail-soft advisory)
+rem 2026-11-22: daily candidates ([S7] operational; 5-seed lgbm ~95s; fail-soft)
+call :step candidates >> "%LOG%" 2>&1
+if errorlevel 1 echo [%DATE% %TIME%] WARN candidates failed >> "%LOG%"
 call :step decision-brief >> "%LOG%" 2>&1
 if errorlevel 1 echo [%DATE% %TIME%] WARN decision-brief failed >> "%LOG%"
 call :py scripts\build_dashboard.py >> "%LOG%" 2>&1

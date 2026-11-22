@@ -127,6 +127,10 @@ def main(argv: list[str] | None = None) -> int:
                        help="自动化守卫:信号日非交易日则跳过(防周末信号污染 forecast_log)")
     p_db = sub.add_parser("decision-brief", help="每日决策简报(融合 signal/判卷/账户/熔断;非投资建议)")
     p_db.add_argument("--date", default=None, help="简报日 YYYY-MM-DD,默认今天")
+    p_cand = sub.add_parser("candidates", help="日线候选名单([S7]候选级,非荐股)")
+    p_cand.add_argument("--topk", type=int, default=10)
+    p_cand.add_argument("--asof", default=None, help="预测日,默认最新")
+
 
     sub.add_parser("forecast-judge", help="判卷到期信号(T+5/T+20,真实数据,不提前猜)")
 
@@ -216,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if d.allowed else 1
 
     if args.cmd in ("signal", "forecast-judge", "forecast-replay", "forecast-summary",
-                    "decision-brief"):
+                    "decision-brief", "candidates"):
         from . import calendar as astock_cal
         from . import forecast as F
         from .signals import generate_signal, load_index_closes
@@ -268,9 +272,35 @@ def main(argv: list[str] | None = None) -> int:
                     _closes = load_index_closes(lake, "000300.SH")
                 except Exception:
                     _closes = []  # 湖缺数据 → 简报市场语境降级,不阻塞
+                # 个股数据新鲜度: 最近"完整日"(≥700 只)——collect 断链可见
+                _bars_last = None
+                try:
+                    from . import alpha_lite as _AL
+                    import pandas as _pd0
+                    _bars = _AL.load_bars_complete(lake, min_symbols=700)
+                    _bd = _pd0.to_datetime(_bars["trade_date"])
+                    _sz = _bars.groupby(_bd).size()
+                    _full = _sz[_sz >= 700]
+                    if len(_full):
+                        _bars_last = _full.index.max().date().isoformat()
+                except Exception:
+                    _bars_last = None
+                # 候选名单:消费 candidates_latest.json(7 天内新鲜才展示,过期=不展示)
+                cand = None
+                _cand_f = resolve_path(cfg, "paths.state_dir") / "candidates_latest.json"
+                if _cand_f.exists():
+                    try:
+                        cand = _json.loads(_cand_f.read_text(encoding="utf-8"))
+                        _age = (_date.today()
+                                - _date.fromisoformat(cand.get("as_of", "1970-01-01"))).days
+                        if _age > 7:
+                            cand = None  # 过期候选不进简报(不展示陈旧名单)
+                    except (ValueError, KeyError, OSError):
+                        cand = None
                 brief = build_brief(latest_signal_row(conn), judge_accuracy(conn),
                                     acct, breaker, eq_curve, day,
-                                    index_closes=_closes)
+                                    index_closes=_closes, candidates=cand,
+                                    bars_last_date=_bars_last)
                 md = render(brief)
                 out_dir = _Path(resolve_path(cfg, "paths.results_dir")) / "decision_brief"
                 out_dir.mkdir(parents=True, exist_ok=True)
@@ -279,6 +309,19 @@ def main(argv: list[str] | None = None) -> int:
                 print(md)
                 print(f"落盘 {out}")
                 return 0
+            if args.cmd == "candidates":
+                import json as _json
+                from pathlib import Path as _Path
+                from .candidates import daily_candidates
+                lake = resolve_path(cfg, "paths.cnequity_lake")
+                r = daily_candidates(lake, topk=getattr(args, "topk", 10),
+                                     asof=getattr(args, "asof", None))
+                out_f = resolve_path(cfg, "paths.state_dir")
+                out_f = (out_f / "candidates_latest.json") if out_f.is_dir() else _Path("data/state/candidates_latest.json")
+                out_f.write_text(_json.dumps(r, ensure_ascii=False, indent=1), encoding="utf-8")
+                print(_json.dumps(r, ensure_ascii=False, indent=1)[:2000])
+                print(f"落盘 {out_f}")
+                return 0 if "error" not in r else 1
             if args.cmd == "forecast-summary":
                 import json as _json
                 cost = float(cfg["backtest"].get("cost_round_trip", 0.002))

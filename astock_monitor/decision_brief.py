@@ -111,7 +111,8 @@ def decide_action(breaker_mode: str, manual_reset: bool,
 
 
 def compute_market_context(index_closes: list | None,
-                           signal_date: str | None) -> dict | None:
+                           signal_date: str | None,
+                           bars_last_date: str | None = None) -> dict | None:
     """市场语境:regime 三票二(官方 PIT 取用口) + 年化已实现波动。
 
     index_closes: [(date, close), ...](与 cli load_index_closes 同源);
@@ -136,9 +137,16 @@ def compute_market_context(index_closes: list | None,
         mean = sum(rets) / len(rets)
         std = (sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)) ** 0.5
         vol_pct = round(std * (250 ** 0.5) * 100, 2)
+    bars_age = None
+    if bars_last_date:
+        try:
+            bars_age = (date.today() - date.fromisoformat(bars_last_date)).days
+        except ValueError:
+            bars_age = None
     return {"regime_state": (row or {}).get("regime"),
             "regime_detail": {k: row.get(k) for k in ("gate", "breadth250", "vol_pct")} if row else None,
-            "realized_vol_pct": vol_pct}
+            "realized_vol_pct": vol_pct,
+            "bars_last_date": bars_last_date, "bars_age_days": bars_age}
 
 
 def _judge_win_rate(judge: dict | None) -> float | None:
@@ -153,13 +161,16 @@ def build_brief(latest: dict | None, judge: dict | None,
                 acct: dict, breaker: dict,
                 equity_curve: list[dict] | None = None,
                 day: str | None = None,
-                index_closes: list | None = None) -> dict:
+                index_closes: list | None = None,
+                candidates: dict | None = None,
+                bars_last_date: str | None = None) -> dict:
     """纯融合:已有产物 dict(+可选指数收盘) → 简报 dict。不读盘不联网。"""
     paper = _paper_metrics(acct, equity_curve)
     action = decide_action(breaker.get("mode", "normal"),
                            bool(breaker.get("manual_reset_required")),
                            (latest or {}).get("verdict"), paper["drawdown"])
-    ctx = compute_market_context(index_closes, (latest or {}).get("signal_date"))
+    ctx = compute_market_context(index_closes, (latest or {}).get("signal_date"),
+                           bars_last_date=bars_last_date)
     win_rate = _judge_win_rate(judge)
     pos = suggested_size(ctx["realized_vol_pct"] if ctx else None,
                          win_rate, None,
@@ -177,6 +188,7 @@ def build_brief(latest: dict | None, judge: dict | None,
                     "last_drawdown": breaker.get("last_drawdown")},
         "market_ctx": ctx,
         "position": pos,
+        "candidates": candidates,
         "action": action,
         "disclaimer": DISCLAIMER,
     }
@@ -230,6 +242,11 @@ def render(brief: dict) -> str:
     lines.append("## 市场语境与仓位")
     if ctx:
         regime_names = {0: "BULL", 1: "NEUTRAL", 2: "BEAR"}
+        bars_age = ctx.get("bars_age_days")
+        if bars_age is not None and bars_age > 3:
+            lines.append(f"- ⚠ 个股数据截止 {ctx.get('bars_last_date')}"
+                            f"（{bars_age} 天前——collect 断链/冷却中,候选名单已停更,按陈旧数据看待）")
+
         rs = ctx.get("regime_state")
         lines.append(f"- regime 三票二: **{regime_names.get(rs, '数据不足')}**"
                      f"（gate={ctx.get('regime_detail', {}).get('gate')} "
@@ -245,6 +262,16 @@ def render(brief: dict) -> str:
         lines.append(f"- 三项边界: {b_str}")
     else:
         lines.append(f"- 建议仓位: 不给出（{pos.get('note', '数据不足')}）")
+
+    cand = brief.get("candidates") or {}
+    if cand.get("candidates"):
+        lines.append("## 候选名单([S7] 候选级,非荐股)")
+        meta_d = cand.get("meta") or {}
+        lines.append(f"> {meta_d.get('disclaimer', '')}")
+        for c in cand["candidates"][:5]:
+            lines.append(f"- {c['symbol']}: 预测分 {c['pred']} ｜ 权重 {c['weight']:.1%}")
+        lines.append(f"(完整 {len(cand['candidates'])} 只见 candidates_latest.json;买入前过 limits.check_order)")
+        lines.append("")
     lines.append("")
     lines.append("*失效即作废，不恋战。*")
     return "\n".join(lines) + "\n"
