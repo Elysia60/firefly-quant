@@ -1,0 +1,108 @@
+{
+ "period": [
+  "2014-12-11",
+  "2026-11-13"
+ ],
+ "n_signals": 698,
+ "n_cost_events": 247,
+ "firefly": {
+  "label": "萤火跟单",
+  "ann_ret": -0.0107,
+  "ann_vol": 0.0788,
+  "sharpe": -0.136,
+  "total_ret": -0.1534,
+  "maxdd": -0.2877,
+  "n_days": 2896,
+  "final_eq": 0.8466
+ },
+ "csi300_hold": {
+  "label": "沪深300 买入持有",
+  "ann_ret": 0.0431,
+  "ann_vol": 0.2141,
+  "sharpe": 0.201,
+  "total_ret": 0.5921,
+  "maxdd": -0.7159,
+  "n_days": 5792,
+  "final_eq": 1.5921
+ },
+ "excess": {
+  "ann_ret": -0.0538,
+  "sharpe_delta": -0.337,
+  "maxdd_diff": 0.4282,
+  "nw_t": -1.149
+ },
+ "verdict": "未跑赢基准",
+ "recent_events": [
+  {
+   "date": "2026-11-02",
+   "verdict": "avoid_watch",
+   "score": 45.76,
+   "action": "观望/减仓",
+   "position": "0%"
+  },
+  {
+   "date": "2026-11-03",
+   "verdict": "neutral",
+   "score": 48.4,
+   "action": "持有",
+   "position": "0%"
+  },
+  {
+   "date": "2026-11-04",
+   "verdict": "neutral",
+   "score": 46.65,
+   "action": "持有",
+   "position": "0%"
+  },
+  {
+   "date": "2026-11-05",
+   "verdict": "neutral",
+   "score": 51.21,
+   "action": "持有",
+   "position": "0%"
+  },
+  {
+   "date": "2026-11-06",
+   "verdict": "neutral",
+   "score": 54.07,
+   "action": "持有",
+   "position": "0%"
+  },
+  {
+   "date": "2026-11-09",
+   "verdict": "neutral",
+   "score": 48.25,
+   "action": "持有",
+   "position": "0%"
+  },
+  {
+   "date": "2026-11-10",
+   "verdict": "neutral",
+   "score": 51.72,
+   "action": "持有",
+   "position": "0%"
+  },
+  {
+   "date": "2026-11-11",
+   "verdict": "neutral",
+   "score": 59.99,
+   "action": "持有",
+   "position": "0%"
+  },
+  {
+   "date": "2026-11-12",
+   "verdict": "buy_watch",
+   "score": 57.82,
+   "action": "分批买入",
+   "position": "60%"
+  },
+  {
+   "date": "2026-11-13",
+   "verdict": "neutral",
+   "score": 45.08,
+   "action": "持有",
+   "position": "60%"
+  }
+ ],
+ "disclaimer": "纸面模拟,指数代理,非实盘;不构成投资建议"
+}
