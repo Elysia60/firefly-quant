@@ -1,0 +1,48 @@
+{
+ "experiment": "[S21] 部分执行(①②;③待全量湖定型)",
+ "window": {
+  "dates": [
+   "2014-11-13",
+   "2026-11-20"
+  ],
+  "n": 2922
+ },
+ "hmm": {
+  "n_states": 3,
+  "seed": 0,
+  "loglik_final": 22526.5,
+  "converged": false,
+  "state_means": [
+   4e-05,
+   0.00704,
+   0.00012,
+   0.02005,
+   0.00054,
+   0.01068
+  ]
+ },
+ "counts": {
+  "bear3_days": 120,
+  "hmm_bear_days": 1047,
+  "bear3_episodes": 5,
+  "hmm_bear_episodes": 23
+ },
+ "discrimination_T20_nonoverlap": {
+  "all_t": 0.95,
+  "bear_3v2_t": -2.575,
+  "hmm_bear_t": 1.264,
+  "hmm_bull_t": 2.431
+ },
+ "lead_1": {
+  "median_lead_days": 43.0,
+  "n_matched_onsets": 1,
+  "interpretation": ">0=HMM 熊态更早,0=同时,<0=HMM 滞后"
+ },
+ "criteria": {
+  "c1_lead_ge0": true,
+  "c2_discrimination_within_tol": true,
+  "c3_inject_ic": "deferred(全量湖定型后)"
+ },
+ "fairness": "两分类器同输入(仅指数收盘);HMM 同 k=5 去抖;状态语义按均值升序",
+ "note": "③未跑 → 结论挂起,不判采纳(预注册纪律)"
+}
