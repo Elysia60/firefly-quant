@@ -1,0 +1,34 @@
+{
+ "pbo": 0.3399,
+ "band": "中度(结论保守读)",
+ "n_combos": 12870,
+ "n_overfit": 4375,
+ "n_blocks": 16,
+ "n_strategies": 4,
+ "T": 128,
+ "logit_mean": 20.921,
+ "method": "CSCV (Bailey-Borwein-Lopez de Prado-Zhu 2017), 精确枚举无采样",
+ "strategies": [
+  "A_hold",
+  "B_avoid_lever_decel",
+  "C_avoid_delever_accel",
+  "D_avoid_slope_neg"
+ ],
+ "T_trimmed": {
+  "from": 143,
+  "to": 128,
+  "rule": "取最近 16 的倍数期"
+ },
+ "grid_span": [
+  "2015-01-23",
+  "2026-09-30"
+ ],
+ "rule_defs": {
+  "A_hold": "永远持有",
+  "B_avoid_lever_decel": "规避[加杠杆·减速]([S18] 拐点前夜桶)",
+  "C_avoid_delever_accel": "规避[降杠杆·加速](明斯基时刻桶)",
+  "D_avoid_slope_neg": "规避[斜率<0](一阶 [S13])"
+ },
+ "criteria": "<=0.2 家族选择有效([S22]降级) / 0.2-0.5 中度(维持) / >0.5 家族选择无效([S18]降级警示)",
+ "note": "[S22] 第二枪;口径=非重叠 T+20 调仓点,规避日收益=现金"
+}
