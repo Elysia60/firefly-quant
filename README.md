@@ -9,7 +9,7 @@
 | 出处 | [github.com/Elysia60/firefly-quant](https://github.com/Elysia60/firefly-quant)(唯一官方源,防伪见 [PROVENANCE.md](PROVENANCE.md)) |
 | 测试 | **285 单测全绿**(零联网可复现) |
 | 全链路 | **126.6 秒**(doctor→signal→judge→candidates→brief,实弹计时) |
-| 数据 | CNEquity TDX 湖 **全市场建成: 11,296,842 行 / 5685 符号 / 2930 日**(2026-11-23)+ akshare(EM 解耦) |
+| 数据 | CNEquity TDX 湖 *含退市档案**: **11,709,009 行 / 5838 符号 / 2930 日**(2026-11-23,幸存者偏差闭合)+ akshare(EM 解耦) |
 | 定位 | **风险监控与研究基座,不是盈利策略引擎**。不构成投资建议。 |
 
 ## 为什么不同：结论注册表
