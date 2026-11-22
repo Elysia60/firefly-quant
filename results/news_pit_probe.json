@@ -1,0 +1,34 @@
+{
+ "probe_ts": "2026-11-23T03:28:27",
+ "akshare_version": "1.18.96",
+ "sample_code": "600519",
+ "pit_standard": "含发布时间戳→归档可行;无→禁用于回测;无历史回溯是常态",
+ "sources": [
+  {
+   "source": "stock_news_em",
+   "ok": false,
+   "error": "ArrowInvalid: Invalid regular expression: invalid escape sequence: \\u",
+   "verdict": "不可用/限流",
+   "elapsed_s": 0.3
+  },
+  {
+   "source": "stock_notice_report",
+   "ok": true,
+   "rows": 2407,
+   "fields": [
+    "代码",
+    "名称",
+    "公告标题",
+    "公告类型",
+    "公告日期",
+    "网址"
+   ],
+   "time_field": "公告日期",
+   "has_time": true,
+   "latest_ts": "2022-05-11",
+   "verdict": "PIT 归档可行(实时流,无历史回溯)",
+   "elapsed_s": 13.5,
+   "sample_headline": "浙江大农"
+  }
+ ]
+}
