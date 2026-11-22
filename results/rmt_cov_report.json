@@ -1,0 +1,51 @@
+{
+ "prereg": {
+  "universe": "hs800 流动性前100(PIT 年选)",
+  "T": 250,
+  "Q": 0.4,
+  "rebal_freq": 21,
+  "start": "2024-01-01",
+  "end": "2026-11-20",
+  "n_rebal": 14,
+  "variants": [
+   "minQ",
+   "clip"
+  ],
+  "baseline": "RAW minvar 同式(隔离滤波效应)"
+ },
+ "metrics": {
+  "minQ": {
+   "ann_ret": 0.1033,
+   "ann_vol": 0.1589,
+   "sharpe": 0.65,
+   "maxdd": -0.1316,
+   "n_days": 278
+  },
+  "clip": {
+   "ann_ret": 0.0805,
+   "ann_vol": 0.1903,
+   "sharpe": 0.423,
+   "maxdd": -0.1651,
+   "n_days": 278
+  },
+  "base": {
+   "ann_ret": 0.0877,
+   "ann_vol": 0.1902,
+   "sharpe": 0.461,
+   "maxdd": -0.1646,
+   "n_days": 278
+  }
+ },
+ "diff_tests": {
+  "minQ_vs_base": {
+   "nw_t": 0.223,
+   "n_days": 278
+  },
+  "clip_vs_base": {
+   "nw_t": -0.537,
+   "n_days": 278
+  }
+ },
+ "verdict": "负面入册(未过 2.0)",
+ "survivor_bias": "宇宙=现任 hs800 成分,已注记"
+}
