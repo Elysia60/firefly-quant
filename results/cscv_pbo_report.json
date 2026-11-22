@@ -1,0 +1,23 @@
+{
+ "pbo": 0.503,
+ "band": "IS 赢家大概率过拟合(负面结论可信度上升)",
+ "n_combos": 12870,
+ "n_overfit": 6473,
+ "n_blocks": 16,
+ "n_strategies": 4,
+ "T": 80,
+ "logit_mean": 0.358,
+ "method": "CSCV (Bailey-Borwein-Lopez de Prado-Zhu 2017), 精确枚举无采样",
+ "strategies": [
+  "A",
+  "B",
+  "C",
+  "D"
+ ],
+ "T_trimmed": {
+  "from": 82,
+  "to": 80,
+  "rule": "取最近 16 的倍数期,弃最旧"
+ },
+ "note": "[S15]-[S17] 家族判卷——PBO 是对'家族整体'的过拟合概率,非单策略结论"
+}
