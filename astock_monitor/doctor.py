@@ -283,6 +283,42 @@ def check_dq_sanity(cfg: dict) -> dict:
             "detail": f"最近 {len(parts[-2:])} 分区 {len(df)} 行: OHLC/价格/涨跌幅三清洁"}
 
 
+def check_bars_freshness(cfg: dict) -> dict:
+    """P6+: bars 新鲜度——最近完整日(≥700 只)距今 ≤4 个日历日 PASS;
+    >4 天 WARN(collect/回填断链——11-12~11-20 断链 10 天而 doctor 全 PASS 的盲区封堵)。
+    治理: candidate/仓位层消费 bars,数据陈旧必须先于结论被看见。"""
+    root = resolve_path(cfg, "paths.cnequity_lake") / "curated" / "daily_bars"
+    parts = sorted(root.rglob("*.parquet"))  # 分区两层嵌套(月/日),rglob 兜底
+    if not parts:
+        return {"name": "bars_freshness", "status": "WARN", "detail": "湖无 daily_bars 分区"}
+    latest = parts[-1]  # 月级分区(trade_date=YYYY-MM),日粒度在数据列里
+    latest_month = latest.parent  # 同月可能有多个 parquet(原 merged+增量回填)——必须全读
+
+    try:
+        import pandas as pd  # noqa: PLC0415
+        df = pd.concat((pd.read_parquet(f, columns=["symbol", "trade_date"])
+                        for f in sorted(latest_month.glob("*.parquet"))), ignore_index=True)
+    except Exception as e:  # noqa: BLE001
+        return {"name": "bars_freshness", "status": "WARN", "detail": f"最新分区不可读: {e}"}
+    if df.empty:
+        return {"name": "bars_freshness", "status": "WARN", "detail": "最新月分区为空"}
+    td = pd.to_datetime(df["trade_date"])
+    day_counts = df.assign(_d=td).groupby("_d")["symbol"].nunique()
+    _full = day_counts[day_counts >= 700]
+    if _full.empty:
+        return {"name": "bars_freshness", "status": "WARN",
+                "detail": "本月无 ≥700 只的完整日——采集不完整"}
+    last_day = _full.index.max()
+    day_s = last_day.strftime("%Y-%m-%d")
+    n_rows = int(_full.max())
+    age = (date.today() - last_day.date()).days
+    if age > 4:
+        return {"name": "bars_freshness", "status": "WARN",
+                "detail": f"{day_s} 距今 {age} 天——collect/回填断链,候选与仓位按陈旧数据看待"}
+    return {"name": "bars_freshness", "status": "PASS",
+            "detail": f"{day_s}({n_rows} 只)距今 {age} 天——新鲜"}
+
+
 def run_doctor(cfg: dict, conn=None, fetcher=None) -> dict:
     checks = [
         check_paths(cfg),
@@ -295,6 +331,7 @@ def run_doctor(cfg: dict, conn=None, fetcher=None) -> dict:
         check_dq_calendar(cfg),
         check_dq_returns(cfg, fetcher=fetcher),
         check_dq_sanity(cfg),
+        check_bars_freshness(cfg),
     ]
     overall = "PASS" if all(c["status"] != "FAIL" for c in checks) else "FAIL"
     report = {"overall": overall, "generated_at": _now_iso(), "checks": checks}

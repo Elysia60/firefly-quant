@@ -20,6 +20,10 @@ rem  data and degrades honestly via gap banner. rc still reflects every failure.
 set COLLECT_FAIL=0
 call :step doctor >> "%LOG%" 2>&1
 if errorlevel 1 goto fail
+rem 2026-11-22: CNEquity TDX incremental backfill (bars source for factor panel;
+rem           EM-independent; root-cause fix for the 11-12~11-20 silent gap)
+call :py scriptsackfill_daily.py --days 9 >> "%LOG%" 2>&1
+if errorlevel 1 echo [%DATE% %TIME%] WARN backfill_daily failed >> "%LOG%"
 call :step collect-daily >> "%LOG%" 2>&1
 if errorlevel 1 (
   set COLLECT_FAIL=1

@@ -77,7 +77,7 @@ class DoctorTest(unittest.TestCase):
         path = Path(self.cfg["paths"]["state_dir"]) / "doctor_report.json"
         data = json.loads(path.read_text(encoding="utf-8"))
         self.assertIn("overall", data)
-        self.assertEqual(len(data["checks"]), 10)
+        self.assertEqual(len(data["checks"]), 11)  # 2026-11-22: +bars_freshness(断链盲区封堵)
 
 
 def _write_daily_bars(lake: Path, rows: list[dict]):
